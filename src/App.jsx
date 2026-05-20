@@ -1,5 +1,52 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 
+/* ─── SUPABASE CONFIG ─── */
+const SUPABASE_URL = 'https://pqedkjlnrgabixjyujrb.supabase.co';
+const SUPABASE_KEY =
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBxZWRramxucmdhYml4anl1anJiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkyOTQ2NTAsImV4cCI6MjA5NDg3MDY1MH0.PAnSu8dadDIEltUaO2oWj8dsv8_OodT_8HaNGcwde68';
+const ROW_ID = 'aguayo-main';
+
+async function supaFetch(method, body) {
+  const url = `${SUPABASE_URL}/rest/v1/app_data?id=eq.${ROW_ID}`;
+  const headers = {
+    apikey: SUPABASE_KEY,
+    Authorization: `Bearer ${SUPABASE_KEY}`,
+    'Content-Type': 'application/json',
+    Prefer: method === 'GET' ? 'return=representation' : 'return=minimal',
+  };
+  const opts = { method, headers };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(url, opts);
+  if (method === 'GET') {
+    const data = await res.json();
+    return data?.[0] || null;
+  }
+  return res.ok;
+}
+
+async function loadData() {
+  try {
+    const row = await supaFetch('GET');
+    if (row) return { goals: row.goals || {}, sales: row.sales || {} };
+  } catch (e) {
+    console.error('Supabase load error:', e);
+  }
+  return { goals: {}, sales: {} };
+}
+
+async function saveData(goals, sales) {
+  try {
+    await supaFetch('PATCH', {
+      goals,
+      sales,
+      updated_at: new Date().toISOString(),
+    });
+  } catch (e) {
+    console.error('Supabase save error:', e);
+  }
+}
+
+/* ─── CONSTANTS ─── */
 const MONTHS_FULL = [
   'Enero',
   'Febrero',
@@ -343,17 +390,14 @@ function LockableInput({ value, onCommit, placeholder, accentColor }) {
     setDraft(isSaved ? String(numericValue) : '');
     setIsEditing(true);
   };
-
   useEffect(() => {
     if (isEditing && inputRef.current) inputRef.current.focus();
   }, [isEditing]);
-
   const finishEdit = () => {
     const num = Number(draft) || 0;
     if (num > 0) onCommit(num);
     setIsEditing(false);
   };
-
   const handleKeyDown = (e) => {
     if (e.key === 'Enter') finishEdit();
   };
@@ -553,7 +597,6 @@ function TabBtn({ label, active, accent, onClick, isFirst, isLast }) {
   );
 }
 
-/* ─── WhatsApp-friendly reminder generator ─── */
 function buildWhatsAppReminder(
   list,
   monthSalesFn,
@@ -566,13 +609,10 @@ function buildWhatsAppReminder(
   let msg = `📊 *AGUAYO Y ASOCIADOS*\n`;
   msg += `📅 Reporte de metas — *${monthName} 2026*\n`;
   msg += `━━━━━━━━━━━━━━━━━━━━\n\n`;
-
   list.forEach((per, idx) => {
     msg += `👤 *${per.name}*\n\n`;
-
     let totalSales = 0,
       totalGoal = 0;
-
     LINES.forEach((l) => {
       const mSales = monthSalesFn(per.id, l.id, month);
       const goal = mGoalFn(per.id, l.id);
@@ -580,32 +620,24 @@ function buildWhatsAppReminder(
       const a = accFn(per.id, l.id, month);
       totalSales += mSales;
       totalGoal += goal;
-
       const statusIcon = diff >= 0 ? '✅' : '⚠️';
       const diffText = diff >= 0 ? `+${fmt(diff)}` : `-${fmt(Math.abs(diff))}`;
-
       msg += `   *${l.label}*\n`;
       msg += `   Meta: ${fmt(goal)} → Ventas: ${fmt(mSales)}\n`;
       msg += `   ${statusIcon} ${diff >= 0 ? 'Cumplida' : 'Pendiente'} (${diffText})\n`;
-
-      if (a.remaining > 0) {
+      if (a.remaining > 0)
         msg += `   📌 Acumulado trim.: falta ${fmt(a.remaining)}\n`;
-      }
       msg += `\n`;
     });
-
     const totalDiff = totalSales - totalGoal;
     const totalPct =
       totalGoal > 0 ? ((totalSales / totalGoal) * 100).toFixed(0) : '0';
     msg += `   📈 *Total: ${fmt(totalSales)} / ${fmt(totalGoal)} (${totalPct}%)*\n`;
     msg += `   ${totalDiff >= 0 ? '🎉 Va por encima de la meta!' : `💪 Faltan ${fmt(Math.abs(totalDiff))} — ¡sí se puede!`}\n`;
-
     if (idx < list.length - 1) msg += `\n━━━━━━━━━━━━━━━━━━━━\n\n`;
   });
-
   msg += `\n━━━━━━━━━━━━━━━━━━━━\n`;
   msg += `_${quarter.name} · Aguayo y Asociados_`;
-
   return msg;
 }
 
@@ -620,35 +652,35 @@ export default function App() {
   const [editMode, setEditMode] = useState(false);
   const [panelOpen, setPanelOpen] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [quote] = useState(
     () => MOTIVATIONAL[Math.floor(Math.random() * MOTIVATIONAL.length)]
   );
+  const saveTimer = useRef(null);
 
+  // Load from Supabase on mount
   useEffect(() => {
     (async () => {
-      try {
-        const r = await window.storage.get('aguayo-v11');
-        if (r?.value) {
-          const d = JSON.parse(r.value);
-          if (d.goals) setGoals(d.goals);
-          if (d.sales) setSales(d.sales);
-        }
-      } catch (e) {}
+      const data = await loadData();
+      setGoals(data.goals);
+      setSales(data.sales);
       setLoaded(true);
     })();
   }, []);
 
-  const save = useCallback(async (g, s) => {
-    try {
-      await window.storage.set(
-        'aguayo-v11',
-        JSON.stringify({ goals: g, sales: s })
-      );
-    } catch (e) {}
-  }, []);
+  // Debounced save to Supabase (saves 800ms after last change)
   useEffect(() => {
-    if (loaded) save(goals, sales);
-  }, [goals, sales, loaded, save]);
+    if (!loaded) return;
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(async () => {
+      setSaving(true);
+      await saveData(goals, sales);
+      setSaving(false);
+    }, 800);
+    return () => {
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+    };
+  }, [goals, sales, loaded]);
 
   const selectTab = (id) => {
     if (tab === id && panelOpen && !editMode) {
@@ -736,15 +768,28 @@ export default function App() {
       <div
         style={{
           display: 'flex',
+          flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
           height: '100vh',
           fontFamily: "'Outfit', sans-serif",
           background: C.bg,
           color: C.muted,
+          gap: 12,
         }}
       >
-        Cargando...
+        <div
+          style={{
+            width: 32,
+            height: 32,
+            border: `3px solid ${C.border}`,
+            borderTopColor: C.blue,
+            borderRadius: '50%',
+            animation: 'spin 0.8s linear infinite',
+          }}
+        />
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        <span style={{ fontSize: 13 }}>Conectando con Supabase...</span>
       </div>
     );
 
@@ -913,6 +958,7 @@ export default function App() {
       />
       <style>{`
         @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes spin { to { transform: rotate(360deg); } }
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         html, body, #root { width: 100%; margin: 0; padding: 0; }
         input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
@@ -965,6 +1011,19 @@ export default function App() {
             ))}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {/* Save indicator */}
+            {saving && (
+              <div
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: 4,
+                  background: C.light,
+                  animation: 'spin 1s linear infinite',
+                  opacity: 0.7,
+                }}
+              />
+            )}
             <button
               onClick={togglePanel}
               style={{
@@ -1043,7 +1102,6 @@ export default function App() {
             width: '100%',
           }}
         >
-          {/* EDIT MODE */}
           {editMode && (
             <>
               {renderBarChart(true, null)}
@@ -1166,7 +1224,6 @@ export default function App() {
             </>
           )}
 
-          {/* PERSON VIEW */}
           {person && !editMode && (
             <>
               {renderBarChart(false, person.id)}
@@ -1216,7 +1273,6 @@ export default function App() {
                   </button>
                 </div>
 
-                {/* Dashboard */}
                 {subView === 'dashboard' &&
                   LINES.map((line) => {
                     const mS = monthSales(person.id, line.id, month);
@@ -1355,7 +1411,6 @@ export default function App() {
                     );
                   })}
 
-                {/* Metas — labels LEFT aligned */}
                 {subView === 'metas' && (
                   <div>
                     <p
@@ -1406,7 +1461,6 @@ export default function App() {
                                   marginTop: 8,
                                   fontSize: 12,
                                   color: C.muted,
-                                  textAlign: 'left',
                                 }}
                               >
                                 <span>
@@ -1428,7 +1482,7 @@ export default function App() {
                                   </strong>
                                 </span>
                               </div>
-                              <div style={{ marginTop: 10, textAlign: 'left' }}>
+                              <div style={{ marginTop: 10 }}>
                                 <div
                                   style={{
                                     display: 'flex',
@@ -1482,7 +1536,6 @@ export default function App() {
                   </div>
                 )}
 
-                {/* Resumen */}
                 {subView === 'resumen' &&
                   QUARTERS.map((q) => {
                     const curr = q === quarter;
@@ -1573,8 +1626,8 @@ export default function App() {
                               >
                                 {q.months.map((m) => {
                                   const mS = monthSales(person.id, line.id, m);
-                                  const mg = mGoal(person.id, line.id);
-                                  const md = mS - mg;
+                                  const mg2 = mGoal(person.id, line.id);
+                                  const md = mS - mg2;
                                   return (
                                     <div key={m}>
                                       <div
@@ -1596,21 +1649,21 @@ export default function App() {
                                             fontSize: 10,
                                             fontWeight: 700,
                                             color:
-                                              md >= 0 && mg > 0
+                                              md >= 0 && mg2 > 0
                                                 ? C.success
-                                                : mg > 0
+                                                : mg2 > 0
                                                   ? C.danger
                                                   : C.muted,
                                           }}
                                         >
-                                          {mg > 0
+                                          {mg2 > 0
                                             ? (md >= 0 ? '+' : '') + fmt(md)
                                             : '—'}
                                         </span>
                                       </div>
                                       <PBar
                                         value={mS}
-                                        goal={mg}
+                                        goal={mg2}
                                         color={LC[line.id]}
                                         h={3}
                                       />
@@ -1636,7 +1689,6 @@ export default function App() {
           )}
         </div>
 
-        {/* Landing */}
         {!isOpen && (
           <div
             style={{
@@ -1671,7 +1723,6 @@ export default function App() {
         )}
       </div>
 
-      {/* REMINDER MODAL */}
       {showReminder &&
         (() => {
           const list = editMode ? PEOPLE : person ? [person] : PEOPLE;
@@ -1729,8 +1780,6 @@ export default function App() {
                     Aguayo y Asociados · {quarter.name}
                   </p>
                 </div>
-
-                {/* Preview */}
                 <div
                   style={{
                     background: '#F0F4F0',
@@ -1749,7 +1798,6 @@ export default function App() {
                 >
                   {waMsg}
                 </div>
-
                 <div style={{ display: 'flex', gap: 10 }}>
                   <button
                     onClick={() => {
