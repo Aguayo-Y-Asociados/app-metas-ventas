@@ -1,48 +1,38 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 
-/* ─── SUPABASE CONFIG ─── */
-const SUPABASE_URL = 'https://pqedkjlnrgabixjyujrb.supabase.co';
-const SUPABASE_KEY =
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBxZWRramxucmdhYml4anl1anJiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkyOTQ2NTAsImV4cCI6MjA5NDg3MDY1MH0.PAnSu8dadDIEltUaO2oWj8dsv8_OodT_8HaNGcwde68';
-const ROW_ID = 'aguayo-main';
-
-async function supaFetch(method, body) {
-  const url = `${SUPABASE_URL}/rest/v1/app_data?id=eq.${ROW_ID}`;
-  const headers = {
-    apikey: SUPABASE_KEY,
-    Authorization: `Bearer ${SUPABASE_KEY}`,
-    'Content-Type': 'application/json',
-    Prefer: method === 'GET' ? 'return=representation' : 'return=minimal',
-  };
-  const opts = { method, headers };
-  if (body) opts.body = JSON.stringify(body);
-  const res = await fetch(url, opts);
-  if (method === 'GET') {
-    const data = await res.json();
-    return data?.[0] || null;
-  }
-  return res.ok;
-}
+/* ─── NEON API CONFIG ─── */
+const API_BASE = '';
 
 async function loadData() {
   try {
-    const row = await supaFetch('GET');
-    if (row) return { goals: row.goals || {}, sales: row.sales || {} };
+    const res = await fetch(`${API_BASE}/api/load`);
+    if (!res.ok) throw new Error('Load failed');
+    return await res.json();
   } catch (e) {
-    console.error('Supabase load error:', e);
+    console.error('API load error:', e);
+    // Fallback to localStorage
+    try {
+      const local = localStorage.getItem('aguayo-backup');
+      if (local) return JSON.parse(local);
+    } catch (e2) {}
+    return { goals: {}, sales: {} };
   }
-  return { goals: {}, sales: {} };
 }
 
 async function saveData(goals, sales) {
+  // Always save to localStorage as backup
   try {
-    await supaFetch('PATCH', {
-      goals,
-      sales,
-      updated_at: new Date().toISOString(),
+    localStorage.setItem('aguayo-backup', JSON.stringify({ goals, sales }));
+  } catch (e) {}
+  // Save to Neon via API
+  try {
+    await fetch(`${API_BASE}/api/save`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ goals, sales }),
     });
   } catch (e) {
-    console.error('Supabase save error:', e);
+    console.error('API save error:', e);
   }
 }
 
@@ -142,7 +132,6 @@ const MOTIVATIONAL = [
   'El carácter se demuestra más en las acciones que en las palabras.',
   'Las personas fuertes se forman a través de la constancia.',
   'Con fe y disciplina, incluso los objetivos más difíciles pueden alcanzarse.',
-  'La fe te recuerda que no estás luchando sola.',
   'Con Dios, siempre existe un nuevo comienzo.',
   'La esperanza crece cuando recuerdas que Dios tiene el control.',
   'Dios sigue obrando, incluso en los días en que no lo puedes ver.',
@@ -658,7 +647,7 @@ export default function App() {
   );
   const saveTimer = useRef(null);
 
-  // Load from Supabase on mount
+  // Load from Neon on mount
   useEffect(() => {
     (async () => {
       const data = await loadData();
@@ -668,7 +657,7 @@ export default function App() {
     })();
   }, []);
 
-  // Debounced save to Supabase (saves 800ms after last change)
+  // Debounced save to Neon (saves 1s after last change)
   useEffect(() => {
     if (!loaded) return;
     if (saveTimer.current) clearTimeout(saveTimer.current);
@@ -676,7 +665,7 @@ export default function App() {
       setSaving(true);
       await saveData(goals, sales);
       setSaving(false);
-    }, 800);
+    }, 1000);
     return () => {
       if (saveTimer.current) clearTimeout(saveTimer.current);
     };
@@ -789,7 +778,7 @@ export default function App() {
           }}
         />
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-        <span style={{ fontSize: 13 }}>Conectando con Supabase...</span>
+        <span style={{ fontSize: 13 }}>Cargando datos...</span>
       </div>
     );
 
