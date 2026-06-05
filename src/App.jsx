@@ -4,7 +4,6 @@ import './App.css';
 
 /* ─── API ─── */
 const API_BASE = '';
-
 async function loadData() {
   try {
     const res = await fetch(`${API_BASE}/api/load`);
@@ -13,13 +12,12 @@ async function loadData() {
   } catch (e) {
     console.error('API load error:', e);
     try {
-      const local = localStorage.getItem('aguayo-backup');
-      if (local) return JSON.parse(local);
+      const l = localStorage.getItem('aguayo-backup');
+      if (l) return JSON.parse(l);
     } catch (e2) {}
     return { goals: {}, sales: {} };
   }
 }
-
 async function saveData(goals, sales) {
   try {
     localStorage.setItem('aguayo-backup', JSON.stringify({ goals, sales }));
@@ -35,8 +33,8 @@ async function saveData(goals, sales) {
   }
 }
 
-/* ─── CONSTANTS ─── */
-const MONTHS_FULL = [
+/* ─── Constants ─── */
+const MF = [
   'Enero',
   'Febrero',
   'Marzo',
@@ -50,7 +48,7 @@ const MONTHS_FULL = [
   'Noviembre',
   'Diciembre',
 ];
-const SHORT = [
+const MS = [
   'Ene',
   'Feb',
   'Mar',
@@ -64,7 +62,7 @@ const SHORT = [
   'Nov',
   'Dic',
 ];
-const DAYS = [
+const DY = [
   'Domingo',
   'Lunes',
   'Martes',
@@ -73,44 +71,25 @@ const DAYS = [
   'Viernes',
   'Sábado',
 ];
-const QUARTERS = [
+const QT = [
   { name: 'Q1', label: 'Ene – Mar', months: [0, 1, 2] },
   { name: 'Q2', label: 'Abr – Jun', months: [3, 4, 5] },
   { name: 'Q3', label: 'Jul – Sep', months: [6, 7, 8] },
   { name: 'Q4', label: 'Oct – Dic', months: [9, 10, 11] },
 ];
-const WEEKS = 4;
-const LINES = [
+const WK = 4;
+const LN = [
   { id: 'vida', label: 'Vida' },
   { id: 'gmm', label: 'GMM' },
   { id: 'autos', label: 'Autos' },
 ];
-const LC = { vida: '#B83B2E', gmm: '#1B4F9E', autos: '#D4820A' };
-const PEOPLE = [
-  {
-    id: 'claudio',
-    name: 'Claudio Aguayo',
-    short: 'Claudio',
-    initials: 'CA',
-    accent: '#1B4F9E',
-  },
-  {
-    id: 'enrique',
-    name: 'Enrique Aguayo',
-    short: 'Enrique',
-    initials: 'EA',
-    accent: '#2471A3',
-  },
-  {
-    id: 'diego',
-    name: 'Diego Aguayo',
-    short: 'Diego',
-    initials: 'DA',
-    accent: '#5DADE2',
-  },
+const LC = { vida: 'var(--vida)', gmm: 'var(--gmm)', autos: 'var(--autos)' };
+const PP = [
+  { id: 'claudio', name: 'Claudio Aguayo', short: 'Claudio', ini: 'CA' },
+  { id: 'enrique', name: 'Enrique Aguayo', short: 'Enrique', ini: 'EA' },
+  { id: 'diego', name: 'Diego Aguayo', short: 'Diego', ini: 'DA' },
 ];
-
-const MOTIVATIONAL = [
+const MOT = [
   'Hoy es un gran día para superar tus metas.',
   'El único límite eres tú mismo.',
   'La perseverancia convierte los sueños en resultados.',
@@ -174,83 +153,77 @@ const MOTIVATIONAL = [
   'Tu futuro mejora en el momento en que decides mejorar tú.',
 ];
 
-/* ─── HELPERS ─── */
-const getQ = (m) => QUARTERS.find((q) => q.months.includes(m));
+/* ─── Helpers ─── */
+const getQ = (m) => QT.find((q) => q.months.includes(m));
 const fmt = (n) =>
   !n || n === 0
     ? '$0'
     : '$' + Math.abs(n).toLocaleString('es-MX', { minimumFractionDigits: 0 });
-const pctVal = (v, g) => (g > 0 ? ((v / g) * 100).toFixed(1) : '0.0');
-function getGreeting() {
+const pct = (v, g) => (g > 0 ? ((v / g) * 100).toFixed(1) : '0.0');
+function greeting() {
   const h = new Date().getHours();
   if (h < 12) return 'Buenos días';
   if (h < 19) return 'Buenas tardes';
   return 'Buenas noches';
 }
-function getDateStr() {
+function dateStr() {
   const d = new Date();
-  return `HOY ES ${DAYS[d.getDay()].toUpperCase()} ${d.getDate()} DE ${MONTHS_FULL[d.getMonth()].toUpperCase()}`;
+  return `HOY ES ${DY[d.getDay()].toUpperCase()} ${d.getDate()} DE ${MF[d.getMonth()].toUpperCase()}`;
 }
 
-/* ─── ICONS ─── */
-function ChevronIcon({ up }) {
-  return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      style={{
-        transition: 'transform 0.3s',
-        transform: up ? 'rotate(180deg)' : 'rotate(0)',
-      }}
-    >
-      <polyline points="6 9 12 15 18 9" />
-    </svg>
-  );
-}
-function EditIconSvg() {
-  return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
-    </svg>
-  );
-}
-function PenMini() {
-  return (
-    <svg
-      width="12"
-      height="12"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
-    </svg>
-  );
-}
+/* ─── Icons ─── */
+const Chev = ({ up }) => (
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    style={{
+      transition: 'transform 0.3s',
+      transform: up ? 'rotate(180deg)' : 'rotate(0)',
+    }}
+  >
+    <polyline points="6 9 12 15 18 9" />
+  </svg>
+);
+const Pen = () => (
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
+  </svg>
+);
+const PenS = () => (
+  <svg
+    width="11"
+    height="11"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
+  </svg>
+);
 
-/* ─── SMALL COMPONENTS ─── */
-function PBar({ value, goal, color, h = 5 }) {
+/* ─── Small components ─── */
+function PBar({ value, goal, color, h = 4 }) {
   const p = goal > 0 ? Math.min((value / goal) * 100, 100) : 0;
   const bg =
-    value >= goal && goal > 0 ? 'var(--success)' : color || 'var(--blue)';
+    value >= goal && goal > 0 ? 'var(--success)' : color || 'var(--ink)';
   return (
     <div className="pbar" style={{ height: h }}>
       <div
@@ -260,8 +233,7 @@ function PBar({ value, goal, color, h = 5 }) {
     </div>
   );
 }
-
-function StatusText({ value, goal }) {
+function Status({ value, goal }) {
   if (!goal) return <span className="status status--empty">Sin meta</span>;
   const d = value - goal;
   return (
@@ -272,39 +244,35 @@ function StatusText({ value, goal }) {
     </span>
   );
 }
-
-function LockableInput({ value, onCommit, placeholder, accentColor }) {
-  const nv = Number(value) || 0;
-  const isSaved = nv > 0;
-  const [isEditing, setIsEditing] = useState(false);
+function LockInput({ value, onCommit, placeholder, accentColor }) {
+  const nv = Number(value) || 0,
+    saved = nv > 0;
+  const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
   const ref = useRef(null);
-  const startEdit = () => {
-    setDraft(isSaved ? String(nv) : '');
-    setIsEditing(true);
+  const open = () => {
+    setDraft(saved ? String(nv) : '');
+    setEditing(true);
   };
   useEffect(() => {
-    if (isEditing && ref.current) ref.current.focus();
-  }, [isEditing]);
-  const finishEdit = () => {
+    if (editing && ref.current) ref.current.focus();
+  }, [editing]);
+  const done = () => {
     const n = Number(draft) || 0;
     if (n > 0) onCommit(n);
-    setIsEditing(false);
+    setEditing(false);
   };
-
-  if (isSaved && !isEditing) {
+  if (saved && !editing)
     return (
-      <div className="lock-display glass">
+      <div className="lock-display">
         <span className="lock-display__value">
           ${nv.toLocaleString('es-MX')}
         </span>
-        <button className="lock-display__edit-btn" onClick={startEdit}>
-          <PenMini />
+        <button className="lock-display__edit-btn" onClick={open}>
+          <PenS />
         </button>
       </div>
     );
-  }
-
   return (
     <div className="lock-input">
       <span className="lock-input__prefix">$</span>
@@ -312,79 +280,74 @@ function LockableInput({ value, onCommit, placeholder, accentColor }) {
         ref={ref}
         type="number"
         className="lock-input__field"
-        value={isEditing ? draft : ''}
+        value={editing ? draft : ''}
         onChange={(e) => {
-          if (isEditing) setDraft(e.target.value);
+          if (editing) setDraft(e.target.value);
           else {
             setDraft(e.target.value);
-            setIsEditing(true);
+            setEditing(true);
           }
         }}
         onFocus={() => {
-          if (!isEditing) {
-            setDraft(isSaved ? String(nv) : '');
-            setIsEditing(true);
+          if (!editing) {
+            setDraft(saved ? String(nv) : '');
+            setEditing(true);
           }
         }}
-        onBlur={finishEdit}
+        onBlur={done}
         onKeyDown={(e) => {
-          if (e.key === 'Enter') finishEdit();
+          if (e.key === 'Enter') done();
         }}
         placeholder={placeholder || '0'}
         style={{
-          borderColor: isEditing ? accentColor || 'var(--blue)' : undefined,
+          borderColor: editing ? accentColor || 'var(--ink)' : undefined,
         }}
       />
     </div>
   );
 }
 
-function buildWhatsAppReminder(list, msFn, mgFn, accFn, month, quarter) {
-  const mn = MONTHS_FULL[month];
-  let msg = `📊 *AGUAYO Y ASOCIADOS*\n📅 Reporte de metas — *${mn} 2026*\n━━━━━━━━━━━━━━━━━━━━\n\n`;
-  list.forEach((per, idx) => {
-    msg += `👤 *${per.name}*\n\n`;
+function waReminder(list, msFn, mgFn, accFn, month, quarter) {
+  let msg = `📊 *AGUAYO Y ASOCIADOS*\n📅 Reporte — *${MF[month]} 2026*\n━━━━━━━━━━━━━━━━━━━━\n\n`;
+  list.forEach((p, i) => {
+    msg += `👤 *${p.name}*\n\n`;
     let tS = 0,
       tG = 0;
-    LINES.forEach((l) => {
-      const s = msFn(per.id, l.id, month),
-        g = mgFn(per.id, l.id),
+    LN.forEach((l) => {
+      const s = msFn(p.id, l.id, month),
+        g = mgFn(p.id, l.id),
         d = s - g,
-        a = accFn(per.id, l.id, month);
+        a = accFn(p.id, l.id, month);
       tS += s;
       tG += g;
       msg += `   *${l.label}*\n   Meta: ${fmt(g)} → Ventas: ${fmt(s)}\n   ${d >= 0 ? '✅ Cumplida' : '⚠️ Pendiente'} (${d >= 0 ? `+${fmt(d)}` : `-${fmt(Math.abs(d))}`})\n`;
       if (a.remaining > 0)
-        msg += `   📌 Acumulado trim.: falta ${fmt(a.remaining)}\n`;
+        msg += `   📌 Acum. trim.: falta ${fmt(a.remaining)}\n`;
       msg += '\n';
     });
     const td = tS - tG,
       tp = tG > 0 ? ((tS / tG) * 100).toFixed(0) : '0';
-    msg += `   📈 *Total: ${fmt(tS)} / ${fmt(tG)} (${tp}%)*\n   ${td >= 0 ? '🎉 Va por encima de la meta!' : `💪 Faltan ${fmt(Math.abs(td))} — ¡sí se puede!`}\n`;
-    if (idx < list.length - 1) msg += '\n━━━━━━━━━━━━━━━━━━━━\n\n';
+    msg += `   📈 *Total: ${fmt(tS)} / ${fmt(tG)} (${tp}%)*\n   ${td >= 0 ? '🎉 Encima de la meta!' : '💪 Faltan ' + fmt(Math.abs(td)) + ' — ¡sí se puede!'}\n`;
+    if (i < list.length - 1) msg += '\n━━━━━━━━━━━━━━━━━━━━\n\n';
   });
   msg += `\n━━━━━━━━━━━━━━━━━━━━\n_${quarter.name} · Aguayo y Asociados_`;
   return msg;
 }
 
 /* ═══════════════════════════════════════════════ */
-/*                    MAIN APP                     */
-/* ═══════════════════════════════════════════════ */
 export default function App() {
-  const [goals, setGoals] = useState({});
-  const [sales, setSales] = useState({});
+  const [goals, setGoals] = useState({}),
+    [sales, setSales] = useState({});
   const [month, setMonth] = useState(new Date().getMonth());
-  const [tab, setTab] = useState(null);
-  const [subView, setSubView] = useState('dashboard');
-  const [showReminder, setShowReminder] = useState(false);
-  const [editMode, setEditMode] = useState(false);
-  const [panelOpen, setPanelOpen] = useState(false);
-  const [loaded, setLoaded] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [quote] = useState(
-    () => MOTIVATIONAL[Math.floor(Math.random() * MOTIVATIONAL.length)]
-  );
-  const saveTimer = useRef(null);
+  const [tab, setTab] = useState(null),
+    [sub, setSub] = useState('dashboard');
+  const [reminder, setReminder] = useState(false),
+    [edit, setEdit] = useState(false);
+  const [open, setOpen] = useState(false),
+    [loaded, setLoaded] = useState(false),
+    [saving, setSaving] = useState(false);
+  const [quote] = useState(() => MOT[Math.floor(Math.random() * MOT.length)]);
+  const timer = useRef(null);
 
   useEffect(() => {
     (async () => {
@@ -394,82 +357,80 @@ export default function App() {
       setLoaded(true);
     })();
   }, []);
-
   useEffect(() => {
     if (!loaded) return;
-    if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(async () => {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(async () => {
       setSaving(true);
       await saveData(goals, sales);
       setSaving(false);
     }, 1000);
     return () => {
-      if (saveTimer.current) clearTimeout(saveTimer.current);
+      if (timer.current) clearTimeout(timer.current);
     };
   }, [goals, sales, loaded]);
 
-  const selectTab = (id) => {
-    if (tab === id && panelOpen && !editMode) {
-      closePanel();
+  const selTab = (id) => {
+    if (tab === id && open && !edit) {
+      close();
       return;
     }
-    setEditMode(false);
+    setEdit(false);
     setTab(id);
-    setSubView('dashboard');
-    setPanelOpen(true);
+    setSub('dashboard');
+    setOpen(true);
   };
-  const togglePanel = () => {
-    if (panelOpen) closePanel();
-    else if (tab || editMode) setPanelOpen(true);
+  const toggle = () => {
+    if (open) close();
+    else if (tab || edit) setOpen(true);
   };
-  const closePanel = () => {
-    setPanelOpen(false);
+  const close = () => {
+    setOpen(false);
     setTimeout(() => {
       setTab(null);
-      setEditMode(false);
+      setEdit(false);
     }, 350);
   };
   const openEdit = () => {
-    if (editMode && panelOpen) {
-      closePanel();
+    if (edit && open) {
+      close();
       return;
     }
     setTab(null);
-    setEditMode(true);
-    setPanelOpen(true);
+    setEdit(true);
+    setOpen(true);
   };
 
-  /* ─── Data ─── */
-  const ag = (pid, lid) => goals[`${pid}-${lid}-year`] || 0;
-  const mg = (pid, lid) => ag(pid, lid) / 12;
-  const wg = (pid, lid) => ag(pid, lid) / 48;
-  const ws = (pid, lid, m, w) => sales[`${pid}-${lid}-m${m}-w${w}`] || 0;
-  const ms = (pid, lid, m) => {
+  const ag = (p, l) => goals[`${p}-${l}-year`] || 0;
+  const mg = (p, l) => ag(p, l) / 12,
+    wg = (p, l) => ag(p, l) / 48;
+  const ws = (p, l, m, w) => sales[`${p}-${l}-m${m}-w${w}`] || 0;
+  const ms = (p, l, m) => {
     let t = 0;
-    for (let w = 0; w < WEEKS; w++) t += ws(pid, lid, m, w);
+    for (let w = 0; w < WK; w++) t += ws(p, l, m, w);
     return t;
   };
-  const mAll = (pid, m) => LINES.reduce((s, l) => s + ms(pid, l.id, m), 0);
-  const mgAll = (pid, m) => LINES.reduce((s, l) => s + mg(pid, l.id), 0);
-  const gMS = (lid, m) => PEOPLE.reduce((s, p) => s + ms(p.id, lid, m), 0);
-  const gMG = (lid, m) => PEOPLE.reduce((s, p) => s + mg(p.id, lid), 0);
-  const gAll = (m) => PEOPLE.reduce((s, p) => s + mAll(p.id, m), 0);
-  const gGoalAll = (m) => PEOPLE.reduce((s, p) => s + mgAll(p.id, m), 0);
-  const qS = (pid, lid, q) => q.months.reduce((s, m) => s + ms(pid, lid, m), 0);
-  const qG = (pid, lid) => mg(pid, lid) * 3;
-  const yS = (pid, lid) => {
+  const mAll = (p, m) => LN.reduce((s, l) => s + ms(p, l.id, m), 0);
+  const mgAll = (p, m) => LN.reduce((s, l) => s + mg(p, l.id), 0);
+  const gMS = (l, m) => PP.reduce((s, p) => s + ms(p.id, l, m), 0);
+  const gMG = (l, m) => PP.reduce((s, p) => s + mg(p.id, l), 0);
+  const gAll = (m) => PP.reduce((s, p) => s + mAll(p.id, m), 0);
+  const gGoalAll = (m) => PP.reduce((s, p) => s + mgAll(p.id, m), 0);
+  const qS = (p, l, q) => q.months.reduce((s, m) => s + ms(p, l, m), 0);
+  const qG = (p, l) => mg(p, l) * 3;
+  const yS = (p, l) => {
     let t = 0;
-    for (let m = 0; m < 12; m++) t += ms(pid, lid, m);
+    for (let m = 0; m < 12; m++) t += ms(p, l, m);
     return t;
   };
-  const acc = (pid, lid, upTo) => {
-    const q = getQ(upTo);
+  const acc = (p, l, u) => {
+    const q = getQ(u);
     let tg = 0,
       ts = 0;
     for (const m of q.months) {
-      if (m > upTo) break;
-      tg += mg(pid, lid);
-      ts += ms(pid, lid, m);
+      if (m > u) break;
+      tg += mg(p, l);
+      ts += ms(p, l, m);
     }
     return {
       goal: tg,
@@ -478,74 +439,66 @@ export default function App() {
       remaining: Math.max(0, tg - ts),
     };
   };
-  const commitGoal = (pid, lid, v) =>
-    setGoals((p) => ({ ...p, [`${pid}-${lid}-year`]: v }));
-  const commitSale = (pid, lid, m, w, v) =>
-    setSales((p) => ({ ...p, [`${pid}-${lid}-m${m}-w${w}`]: v }));
+  const cG = (p, l, v) => setGoals((x) => ({ ...x, [`${p}-${l}-year`]: v }));
+  const cS = (p, l, m, w, v) =>
+    setSales((x) => ({ ...x, [`${p}-${l}-m${m}-w${w}`]: v }));
 
-  const quarter = getQ(month);
-  const person = PEOPLE.find((p) => p.id === tab);
-  const isOpen = panelOpen && (tab || editMode);
+  const quarter = getQ(month),
+    person = PP.find((p) => p.id === tab),
+    isOpen = open && (tab || edit);
 
-  /* ─── Loading ─── */
   if (!loaded)
     return (
       <div className="app loading">
         <img src={logoSvg} alt="" className="loading__logo" />
         <div className="loading__spinner" />
-        <span className="loading__text">Cargando datos...</span>
+        <span className="loading__text">Cargando...</span>
       </div>
     );
 
-  /* ─── Bar Chart ─── */
-  function renderBarChart(isGlobal, pid) {
-    const bars = LINES.map((line) => {
-      const s = isGlobal ? gMS(line.id, month) : ms(pid, line.id, month);
-      const g = isGlobal ? gMG(line.id, month) : mg(pid, line.id);
-      return { ...line, sales: s, goal: g, pct: g > 0 ? (s / g) * 100 : 0 };
+  function barChart(global, pid) {
+    const bars = LN.map((l) => {
+      const s = global ? gMS(l.id, month) : ms(pid, l.id, month),
+        g = global ? gMG(l.id, month) : mg(pid, l.id);
+      return { ...l, sales: s, goal: g, p: g > 0 ? (s / g) * 100 : 0 };
     });
-    const totalS = isGlobal ? gAll(month) : mAll(pid, month);
-    const totalG = isGlobal ? gGoalAll(month) : mgAll(pid, month);
-    const maxVal = Math.max(...bars.map((b) => Math.max(b.sales, b.goal)), 1);
-
+    const tS = global ? gAll(month) : mAll(pid, month),
+      tG = global ? gGoalAll(month) : mgAll(pid, month);
+    const mx = Math.max(...bars.map((b) => Math.max(b.sales, b.goal)), 1);
     return (
       <div className="chart">
         <div className="chart__header">
           <div>
             <div className="chart__label">
-              {isGlobal
+              {global
                 ? 'Rendimiento global'
-                : PEOPLE.find((p) => p.id === pid)?.name}{' '}
-              — {MONTHS_FULL[month]}
+                : PP.find((p) => p.id === pid)?.name}{' '}
+              — {MF[month]}
             </div>
-            <span className="chart__total">{fmt(totalS)}</span>
-            <span className="chart__goal">/ {fmt(totalG)}</span>
+            <span className="chart__total">{fmt(tS)}</span>
+            <span className="chart__goal">/ {fmt(tG)}</span>
           </div>
           <span
             className="chart__pct"
             style={{
               color:
-                totalS >= totalG && totalG > 0
+                tS >= tG && tG > 0
                   ? 'var(--success)'
-                  : totalG > 0
+                  : tG > 0
                     ? 'var(--danger)'
-                    : 'var(--muted)',
+                    : 'var(--ink-muted)',
             }}
           >
-            {totalG > 0 ? pctVal(totalS, totalG) + '%' : '—'}
+            {tG > 0 ? pct(tS, tG) + '%' : '—'}
           </span>
         </div>
         <div className="chart__bars">
-          {bars.map((bar) => {
-            const sH = maxVal > 0 ? (bar.sales / maxVal) * 100 : 0;
-            const gH = maxVal > 0 ? (bar.goal / maxVal) * 100 : 0;
-            const bg =
-              bar.pct >= 100
-                ? `linear-gradient(180deg, var(--success), ${LC[bar.id]})`
-                : LC[bar.id];
+          {bars.map((b) => {
+            const sH = mx > 0 ? (b.sales / mx) * 100 : 0,
+              gH = mx > 0 ? (b.goal / mx) * 100 : 0;
             return (
-              <div key={bar.id} className="chart__bar-col">
-                <div className="chart__bar-value">{fmt(bar.sales)}</div>
+              <div key={b.id} className="chart__bar-col">
+                <div className="chart__bar-value">{fmt(b.sales)}</div>
                 <div className="chart__bar-track">
                   <div
                     className="chart__bar-ghost"
@@ -553,57 +506,43 @@ export default function App() {
                   />
                   <div
                     className="chart__bar-fill"
-                    style={{ height: `${sH}%`, background: bg }}
+                    style={{ height: `${sH}%`, background: LC[b.id] }}
                   />
                 </div>
-                <div className="chart__bar-label">{bar.label}</div>
+                <div className="chart__bar-label">{b.label}</div>
               </div>
             );
           })}
         </div>
         <div className="months">
-          {MONTHS_FULL.map((_, i) => {
-            const sel = month === i;
-            const inQ = getQ(i) === quarter;
-            return (
-              <button
-                key={i}
-                className={`mo-pill ${sel ? 'mo-pill--selected' : inQ ? 'mo-pill--in-q' : ''}`}
-                onClick={() => setMonth(i)}
-              >
-                {SHORT[i]}
-              </button>
-            );
-          })}
+          {MF.map((_, i) => (
+            <button
+              key={i}
+              className={`mo-pill ${month === i ? 'mo-pill--selected' : getQ(i) === quarter ? 'mo-pill--in-q' : ''}`}
+              onClick={() => setMonth(i)}
+            >
+              {MS[i]}
+            </button>
+          ))}
         </div>
       </div>
     );
   }
 
-  /* ─── RENDER ─── */
   return (
     <div className="app">
-      {/* HEADER */}
-      <header className="header glass">
+      <header className="header">
         <div className="header__inner">
           <div className="header__greeting">
-            <div className="header__greeting-text">{getGreeting()},</div>
-            <div className="header__date">{getDateStr()}</div>
+            <div className="header__greeting-text">{greeting()},</div>
+            <div className="header__date">{dateStr()}</div>
           </div>
           <div className="header__tabs">
-            {PEOPLE.map((p, i) => (
+            {PP.map((p, i) => (
               <button
                 key={p.id}
-                className={`tab-btn ${i === 0 ? 'tab-btn--first' : ''} ${i === PEOPLE.length - 1 ? 'tab-btn--last' : ''} ${i > 0 && i < PEOPLE.length - 1 ? 'tab-btn--middle' : ''} ${!i && i < PEOPLE.length - 1 ? 'tab-btn--middle' : ''} ${tab === p.id && !editMode ? 'tab-btn--active' : ''}`}
-                style={
-                  tab === p.id && !editMode
-                    ? {
-                        background: p.accent,
-                        boxShadow: `0 2px 16px ${p.accent}30`,
-                      }
-                    : undefined
-                }
-                onClick={() => selectTab(p.id)}
+                className={`tab-btn ${i === 0 ? 'tab-btn--first' : ''} ${i === PP.length - 1 ? 'tab-btn--last' : ''} ${i > 0 && i < PP.length - 1 ? 'tab-btn--middle' : ''} ${!i && i < PP.length - 1 ? 'tab-btn--middle' : ''} ${tab === p.id && !edit ? 'tab-btn--active' : ''}`}
+                onClick={() => selTab(p.id)}
               >
                 {p.short}
               </button>
@@ -612,85 +551,61 @@ export default function App() {
           <div className="header__actions">
             {saving && <div className="save-dot" />}
             <button
-              className={`icon-btn glass ${!tab && !editMode ? 'icon-btn--disabled' : ''}`}
-              onClick={togglePanel}
+              className={`icon-btn ${!tab && !edit ? 'icon-btn--disabled' : ''}`}
+              onClick={toggle}
             >
-              <ChevronIcon up={isOpen} />
+              <Chev up={isOpen} />
             </button>
             <button
-              className={`icon-btn ${editMode ? 'icon-btn--active' : 'glass'}`}
+              className={`icon-btn ${edit ? 'icon-btn--active' : ''}`}
               onClick={openEdit}
             >
-              <EditIconSvg />
+              <Pen />
             </button>
           </div>
         </div>
       </header>
 
-      {/* BODY */}
       <div className="body">
-        <div
-          className={`panel glass-strong ${isOpen ? 'panel--open' : 'panel--closed'}`}
-        >
-          {/* EDIT MODE */}
-          {editMode && (
+        <div className={`panel ${isOpen ? 'panel--open' : 'panel--closed'}`}>
+          {edit && (
             <>
-              {renderBarChart(true, null)}
+              {barChart(true, null)}
               <div className="content">
                 <div className="registro__title">
                   <div className="registro__title-text">Registro de Ventas</div>
-                  <div className="registro__title-sub">
-                    {MONTHS_FULL[month]} 2026
-                  </div>
+                  <div className="registro__title-sub">{MF[month]} 2026</div>
                 </div>
-                {PEOPLE.map((per) => (
-                  <div key={per.id} className="registro__person">
+                {PP.map((p) => (
+                  <div key={p.id} className="registro__person">
                     <div className="registro__person-header">
-                      <div
-                        className="registro__avatar"
-                        style={{
-                          background: `linear-gradient(135deg, ${per.accent}, ${per.accent}CC)`,
-                          boxShadow: `0 2px 8px ${per.accent}25`,
-                        }}
-                      >
-                        {per.initials}
-                      </div>
-                      <span className="registro__person-name">{per.name}</span>
+                      <div className="registro__avatar">{p.ini}</div>
+                      <span className="registro__person-name">{p.name}</span>
                     </div>
-                    {LINES.map((line) => (
-                      <div key={line.id} className="registro__line">
+                    {LN.map((l) => (
+                      <div key={l.id} className="registro__line">
                         <div className="registro__line-header">
-                          <span className="registro__line-name">
-                            {line.label}
-                          </span>
+                          <span className="registro__line-name">{l.label}</span>
                           <div className="registro__line-meta">
-                            Meta: {fmt(mg(per.id, line.id))}
-                            <span className="sep-pipe">|</span>
-                            Total:{' '}
-                            <strong>{fmt(ms(per.id, line.id, month))}</strong>
-                            <span style={{ marginLeft: 5 }}>
-                              <StatusText
-                                value={ms(per.id, line.id, month)}
-                                goal={mg(per.id, line.id)}
-                              />
-                            </span>
+                            Meta: {fmt(mg(p.id, l.id))}
+                            <span className="sep-pipe">|</span>Total:{' '}
+                            <strong>{fmt(ms(p.id, l.id, month))}</strong>{' '}
+                            <Status
+                              value={ms(p.id, l.id, month)}
+                              goal={mg(p.id, l.id)}
+                            />
                           </div>
                         </div>
                         <div className="registro__weeks">
-                          {Array.from({ length: WEEKS }).map((_, w) => (
-                            <div key={`${per.id}-${line.id}-${month}-${w}`}>
+                          {Array.from({ length: WK }).map((_, w) => (
+                            <div key={`${p.id}-${l.id}-${month}-${w}`}>
                               <label className="registro__week-label">
                                 Sem {w + 1}
                               </label>
-                              <LockableInput
-                                value={
-                                  sales[`${per.id}-${line.id}-m${month}-w${w}`]
-                                }
-                                onCommit={(v) =>
-                                  commitSale(per.id, line.id, month, w, v)
-                                }
+                              <LockInput
+                                value={sales[`${p.id}-${l.id}-m${month}-w${w}`]}
+                                onCommit={(v) => cS(p.id, l.id, month, w, v)}
                                 placeholder="0"
-                                accentColor={per.accent}
                               />
                             </div>
                           ))}
@@ -704,10 +619,9 @@ export default function App() {
             </>
           )}
 
-          {/* PERSON VIEW */}
-          {person && !editMode && (
+          {person && !edit && (
             <>
-              {renderBarChart(false, person.id)}
+              {barChart(false, person.id)}
               <div className="content">
                 <div className="sub-tabs">
                   {[
@@ -717,60 +631,46 @@ export default function App() {
                   ].map((v) => (
                     <button
                       key={v.k}
-                      className={`sub-tab ${subView === v.k ? 'sub-tab--active' : ''}`}
-                      style={
-                        subView === v.k
-                          ? {
-                              background: person.accent,
-                              boxShadow: `0 2px 12px ${person.accent}30`,
-                            }
-                          : undefined
-                      }
-                      onClick={() => setSubView(v.k)}
+                      className={`sub-tab ${sub === v.k ? 'sub-tab--active' : ''}`}
+                      onClick={() => setSub(v.k)}
                     >
                       {v.l}
                     </button>
                   ))}
                   <button
                     className="reminder-btn"
-                    onClick={() => setShowReminder(true)}
+                    onClick={() => setReminder(true)}
                   >
                     🔔
                   </button>
                 </div>
 
-                {/* DASHBOARD */}
-                {subView === 'dashboard' &&
-                  LINES.map((line) => {
-                    const mS = ms(person.id, line.id, month),
-                      goal = mg(person.id, line.id),
-                      a = acc(person.id, line.id, month);
+                {sub === 'dashboard' &&
+                  LN.map((l) => {
+                    const mS = ms(person.id, l.id, month),
+                      goal = mg(person.id, l.id),
+                      a = acc(person.id, l.id, month);
                     return (
-                      <div key={line.id} className="line-row">
+                      <div key={l.id} className="line-row">
                         <div className="line-row__header">
                           <div>
-                            <span className="line-row__name">{line.label}</span>
+                            <span className="line-row__name">{l.label}</span>
                             <span className="line-row__annual">
-                              Anual: {fmt(ag(person.id, line.id))}
+                              Anual: {fmt(ag(person.id, l.id))}
                             </span>
                           </div>
-                          <StatusText value={mS} goal={goal} />
+                          <Status value={mS} goal={goal} />
                         </div>
                         <div className="line-row__progress-info">
                           <span>
                             {fmt(mS)} / {fmt(goal)}
                           </span>
-                          <span>{pctVal(mS, goal)}%</span>
+                          <span>{pct(mS, goal)}%</span>
                         </div>
-                        <PBar
-                          value={mS}
-                          goal={goal}
-                          color={LC[line.id]}
-                          h={6}
-                        />
+                        <PBar value={mS} goal={goal} color={LC[l.id]} h={5} />
                         <div className="line-row__weeks">
-                          {Array.from({ length: WEEKS }).map((_, w) => {
-                            const wSale = ws(person.id, line.id, month, w);
+                          {Array.from({ length: WK }).map((_, w) => {
+                            const wSale = ws(person.id, l.id, month, w);
                             return (
                               <div key={w}>
                                 <div className="week-cell__header">
@@ -783,8 +683,8 @@ export default function App() {
                                 </div>
                                 <PBar
                                   value={wSale}
-                                  goal={wg(person.id, line.id)}
-                                  color={LC[line.id]}
+                                  goal={wg(person.id, l.id)}
+                                  color={LC[l.id]}
                                   h={3}
                                 />
                               </div>
@@ -813,53 +713,48 @@ export default function App() {
                     );
                   })}
 
-                {/* METAS */}
-                {subView === 'metas' && (
+                {sub === 'metas' && (
                   <div>
                     <p className="metas__description">
                       Define la meta anual. Se divide automáticamente por mes y
                       semana. Lo no cumplido se acumula en el trimestre.
                     </p>
-                    {LINES.map((line) => {
-                      const annual = ag(person.id, line.id);
+                    {LN.map((l) => {
+                      const an = ag(person.id, l.id);
                       return (
-                        <div key={line.id} className="metas__line">
-                          <div className="metas__line-name">{line.label}</div>
+                        <div key={l.id} className="metas__line">
+                          <div className="metas__line-name">{l.label}</div>
                           <div className="metas__input-wrap">
-                            <LockableInput
-                              value={goals[`${person.id}-${line.id}-year`]}
-                              onCommit={(v) =>
-                                commitGoal(person.id, line.id, v)
-                              }
+                            <LockInput
+                              value={goals[`${person.id}-${l.id}-year`]}
+                              onCommit={(v) => cG(person.id, l.id, v)}
                               placeholder="Meta anual"
-                              accentColor={person.accent}
                             />
                           </div>
-                          {annual > 0 && (
+                          {an > 0 && (
                             <>
                               <div className="metas__breakdown">
                                 <span>
-                                  Mensual: <strong>{fmt(annual / 12)}</strong>
+                                  Mensual: <strong>{fmt(an / 12)}</strong>
                                 </span>
                                 <span>
-                                  Semanal: <strong>{fmt(annual / 48)}</strong>
+                                  Semanal: <strong>{fmt(an / 48)}</strong>
                                 </span>
                                 <span>
-                                  Trimestral: <strong>{fmt(annual / 4)}</strong>
+                                  Trimestral: <strong>{fmt(an / 4)}</strong>
                                 </span>
                               </div>
                               <div className="metas__annual-progress">
                                 <div className="metas__annual-info">
                                   <span>Progreso anual</span>
                                   <span>
-                                    {fmt(yS(person.id, line.id))} /{' '}
-                                    {fmt(annual)}
+                                    {fmt(yS(person.id, l.id))} / {fmt(an)}
                                   </span>
                                 </div>
                                 <PBar
-                                  value={yS(person.id, line.id)}
-                                  goal={annual}
-                                  color={LC[line.id]}
+                                  value={yS(person.id, l.id)}
+                                  goal={an}
+                                  color={LC[l.id]}
                                   h={4}
                                 />
                               </div>
@@ -884,10 +779,9 @@ export default function App() {
                   </div>
                 )}
 
-                {/* RESUMEN */}
-                {subView === 'resumen' &&
-                  QUARTERS.map((q) => {
-                    const curr = q === quarter;
+                {sub === 'resumen' &&
+                  QT.map((q) => {
+                    const cur = q === quarter;
                     return (
                       <div key={q.name} className="quarter-block">
                         <div className="quarter-block__header">
@@ -895,19 +789,19 @@ export default function App() {
                           <span className="quarter-block__label">
                             {q.label}
                           </span>
-                          {curr && (
+                          {cur && (
                             <span className="quarter-block__badge">Actual</span>
                           )}
                         </div>
-                        {LINES.map((line) => {
-                          const qs = qS(person.id, line.id, q),
-                            qGoal = qG(person.id, line.id),
+                        {LN.map((l) => {
+                          const qs = qS(person.id, l.id, q),
+                            qGoal = qG(person.id, l.id),
                             diff = qs - qGoal;
                           return (
-                            <div key={line.id} className="quarter-line">
+                            <div key={l.id} className="quarter-line">
                               <div className="quarter-line__header">
                                 <span className="quarter-line__name">
-                                  {line.label}
+                                  {l.label}
                                 </span>
                                 <div className="quarter-line__values">
                                   <span className="quarter-line__total">
@@ -930,19 +824,19 @@ export default function App() {
                               <PBar
                                 value={qs}
                                 goal={qGoal}
-                                color={LC[line.id]}
+                                color={LC[l.id]}
                                 h={4}
                               />
                               <div className="quarter-line__months">
                                 {q.months.map((m) => {
-                                  const mS = ms(person.id, line.id, m),
-                                    mGoal = mg(person.id, line.id),
+                                  const mS = ms(person.id, l.id, m),
+                                    mGoal = mg(person.id, l.id),
                                     md = mS - mGoal;
                                   return (
                                     <div key={m}>
                                       <div className="quarter-month__header">
                                         <span className="quarter-month__name">
-                                          {MONTHS_FULL[m]}
+                                          {MF[m]}
                                         </span>
                                         <span
                                           className="quarter-month__diff"
@@ -952,7 +846,7 @@ export default function App() {
                                                 ? 'var(--success)'
                                                 : mGoal > 0
                                                   ? 'var(--danger)'
-                                                  : 'var(--muted)',
+                                                  : 'var(--ink-muted)',
                                           }}
                                         >
                                           {mGoal > 0
@@ -963,7 +857,7 @@ export default function App() {
                                       <PBar
                                         value={mS}
                                         goal={mGoal}
-                                        color={LC[line.id]}
+                                        color={LC[l.id]}
                                         h={3}
                                       />
                                     </div>
@@ -982,14 +876,9 @@ export default function App() {
           )}
         </div>
 
-        {/* LANDING */}
         {!isOpen && (
           <div className="landing">
-            <img
-              src={logoSvg}
-              alt="Aguayo y Asociados"
-              className="landing__logo"
-            />
+            <img src={logoSvg} alt="" className="landing__logo" />
             <div className="landing__content">
               <p className="landing__quote">"{quote}"</p>
               <p className="landing__hint">
@@ -1000,51 +889,37 @@ export default function App() {
         )}
       </div>
 
-      {/* REMINDER MODAL */}
-      {showReminder &&
+      {reminder &&
         (() => {
-          const list = editMode ? PEOPLE : person ? [person] : PEOPLE;
-          const waMsg = buildWhatsAppReminder(
-            list,
-            ms,
-            mg,
-            acc,
-            month,
-            quarter
-          );
+          const list = edit ? PP : person ? [person] : PP;
+          const msg = waReminder(list, ms, mg, acc, month, quarter);
           return (
-            <div
-              className="modal-overlay"
-              onClick={() => setShowReminder(false)}
-            >
-              <div
-                className="modal glass-strong"
-                onClick={(e) => e.stopPropagation()}
-              >
+            <div className="modal-overlay" onClick={() => setReminder(false)}>
+              <div className="modal" onClick={(e) => e.stopPropagation()}>
                 <div className="modal__header">
                   <div className="modal__icon">🔔</div>
                   <h2 className="modal__title">
-                    Recordatorio — {MONTHS_FULL[month]} 2026
+                    Recordatorio — {MF[month]} 2026
                   </h2>
                   <p className="modal__subtitle">
                     Aguayo y Asociados · {quarter.name}
                   </p>
                 </div>
-                <div className="modal__preview glass">{waMsg}</div>
+                <div className="modal__preview">{msg}</div>
                 <div className="modal__actions">
                   <button
                     className="modal__wa-btn"
                     onClick={() => {
                       navigator.clipboard
-                        .writeText(waMsg)
+                        .writeText(msg)
                         .then(() => alert('Copiado — pégalo en WhatsApp'));
                     }}
                   >
                     Copiar para WhatsApp
                   </button>
                   <button
-                    className="modal__close-btn glass"
-                    onClick={() => setShowReminder(false)}
+                    className="modal__close-btn"
+                    onClick={() => setReminder(false)}
                   >
                     Cerrar
                   </button>
