@@ -1,6 +1,8 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import logoSvg from './assets/logo.svg';
+import './App.css';
 
-/* ─── NEON API CONFIG ─── */
+/* ─── API ─── */
 const API_BASE = '';
 
 async function loadData() {
@@ -10,7 +12,6 @@ async function loadData() {
     return await res.json();
   } catch (e) {
     console.error('API load error:', e);
-    // Fallback to localStorage
     try {
       const local = localStorage.getItem('aguayo-backup');
       if (local) return JSON.parse(local);
@@ -20,11 +21,9 @@ async function loadData() {
 }
 
 async function saveData(goals, sales) {
-  // Always save to localStorage as backup
   try {
     localStorage.setItem('aguayo-backup', JSON.stringify({ goals, sales }));
   } catch (e) {}
-  // Save to Neon via API
   try {
     await fetch(`${API_BASE}/api/save`, {
       method: 'POST',
@@ -175,13 +174,13 @@ const MOTIVATIONAL = [
   'Tu futuro mejora en el momento en que decides mejorar tú.',
 ];
 
+/* ─── HELPERS ─── */
 const getQ = (m) => QUARTERS.find((q) => q.months.includes(m));
 const fmt = (n) =>
   !n || n === 0
     ? '$0'
     : '$' + Math.abs(n).toLocaleString('es-MX', { minimumFractionDigits: 0 });
 const pctVal = (v, g) => (g > 0 ? ((v / g) * 100).toFixed(1) : '0.0');
-
 function getGreeting() {
   const h = new Date().getHours();
   if (h < 12) return 'Buenos días';
@@ -193,25 +192,12 @@ function getDateStr() {
   return `HOY ES ${DAYS[d.getDay()].toUpperCase()} ${d.getDate()} DE ${MONTHS_FULL[d.getMonth()].toUpperCase()}`;
 }
 
-const C = {
-  bg: '#EAECF0',
-  panel: '#FFFFFF',
-  border: '#D6DBE4',
-  text: '#1B2A4A',
-  muted: '#929EAE',
-  navy: '#0D2B5C',
-  blue: '#1B4F9E',
-  light: '#5DADE2',
-  success: '#1E8449',
-  warning: '#B7950B',
-  danger: '#A93226',
-};
-
+/* ─── ICONS ─── */
 function ChevronIcon({ up }) {
   return (
     <svg
-      width="20"
-      height="20"
+      width="18"
+      height="18"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -219,8 +205,8 @@ function ChevronIcon({ up }) {
       strokeLinecap="round"
       strokeLinejoin="round"
       style={{
-        transition: 'transform 0.3s ease',
-        transform: up ? 'rotate(180deg)' : 'rotate(0deg)',
+        transition: 'transform 0.3s',
+        transform: up ? 'rotate(180deg)' : 'rotate(0)',
       }}
     >
       <polyline points="6 9 12 15 18 9" />
@@ -230,8 +216,8 @@ function ChevronIcon({ up }) {
 function EditIconSvg() {
   return (
     <svg
-      width="20"
-      height="20"
+      width="18"
+      height="18"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -259,109 +245,28 @@ function PenMini() {
     </svg>
   );
 }
-function ShieldIllustration() {
-  return (
-    <svg
-      width="130"
-      height="130"
-      viewBox="0 0 200 200"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      style={{ opacity: 0.22 }}
-    >
-      <path
-        d="M100 18 L170 50 L170 110 Q170 160 100 188 Q30 160 30 110 L30 50 Z"
-        stroke="#8896AB"
-        strokeWidth="2.5"
-        fill="none"
-      />
-      <line
-        x1="60"
-        y1="140"
-        x2="60"
-        y2="100"
-        stroke="#8896AB"
-        strokeWidth="5"
-        strokeLinecap="round"
-      />
-      <line
-        x1="80"
-        y1="140"
-        x2="80"
-        y2="80"
-        stroke="#8896AB"
-        strokeWidth="5"
-        strokeLinecap="round"
-      />
-      <line
-        x1="100"
-        y1="140"
-        x2="100"
-        y2="65"
-        stroke="#8896AB"
-        strokeWidth="5"
-        strokeLinecap="round"
-      />
-      <line
-        x1="120"
-        y1="140"
-        x2="120"
-        y2="75"
-        stroke="#8896AB"
-        strokeWidth="5"
-        strokeLinecap="round"
-      />
-      <line
-        x1="140"
-        y1="140"
-        x2="140"
-        y2="55"
-        stroke="#8896AB"
-        strokeWidth="5"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
 
+/* ─── SMALL COMPONENTS ─── */
 function PBar({ value, goal, color, h = 5 }) {
-  const barColor = color || C.blue;
   const p = goal > 0 ? Math.min((value / goal) * 100, 100) : 0;
+  const bg =
+    value >= goal && goal > 0 ? 'var(--success)' : color || 'var(--blue)';
   return (
-    <div
-      style={{
-        height: h,
-        background: '#E2E6ED',
-        borderRadius: 4,
-        overflow: 'hidden',
-        width: '100%',
-      }}
-    >
+    <div className="pbar" style={{ height: h }}>
       <div
-        style={{
-          height: '100%',
-          width: `${p}%`,
-          borderRadius: 4,
-          background: value >= goal && goal > 0 ? C.success : barColor,
-          transition: 'width 0.5s ease',
-          opacity: 0.75,
-        }}
+        className="pbar__fill"
+        style={{ height: '100%', width: `${p}%`, background: bg }}
       />
     </div>
   );
 }
 
 function StatusText({ value, goal }) {
-  if (!goal)
-    return <span style={{ color: C.muted, fontSize: 11 }}>Sin meta</span>;
+  if (!goal) return <span className="status status--empty">Sin meta</span>;
   const d = value - goal;
   return (
     <span
-      style={{
-        fontSize: 11,
-        fontWeight: 600,
-        color: d >= 0 ? C.success : C.danger,
-      }}
+      className={`status ${d >= 0 ? 'status--positive' : 'status--negative'}`}
     >
       {d >= 0 ? `+${fmt(d)}` : `-${fmt(Math.abs(d))}`}
     </span>
@@ -369,73 +274,31 @@ function StatusText({ value, goal }) {
 }
 
 function LockableInput({ value, onCommit, placeholder, accentColor }) {
-  const numericValue = Number(value) || 0;
-  const isSaved = numericValue > 0;
+  const nv = Number(value) || 0;
+  const isSaved = nv > 0;
   const [isEditing, setIsEditing] = useState(false);
   const [draft, setDraft] = useState('');
-  const inputRef = useRef(null);
-
+  const ref = useRef(null);
   const startEdit = () => {
-    setDraft(isSaved ? String(numericValue) : '');
+    setDraft(isSaved ? String(nv) : '');
     setIsEditing(true);
   };
   useEffect(() => {
-    if (isEditing && inputRef.current) inputRef.current.focus();
+    if (isEditing && ref.current) ref.current.focus();
   }, [isEditing]);
   const finishEdit = () => {
-    const num = Number(draft) || 0;
-    if (num > 0) onCommit(num);
+    const n = Number(draft) || 0;
+    if (n > 0) onCommit(n);
     setIsEditing(false);
-  };
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter') finishEdit();
   };
 
   if (isSaved && !isEditing) {
     return (
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 4,
-          padding: '8px 10px',
-          background: '#F0F3F9',
-          borderRadius: 8,
-          minHeight: 36,
-        }}
-      >
-        <span
-          style={{
-            fontSize: 13,
-            fontWeight: 700,
-            color: C.text,
-            fontFamily: "'Outfit', sans-serif",
-            flex: 1,
-          }}
-        >
-          ${numericValue.toLocaleString('es-MX')}
+      <div className="lock-display glass">
+        <span className="lock-display__value">
+          ${nv.toLocaleString('es-MX')}
         </span>
-        <button
-          onClick={startEdit}
-          style={{
-            width: 22,
-            height: 22,
-            borderRadius: 5,
-            border: 'none',
-            padding: 0,
-            background: 'transparent',
-            cursor: 'pointer',
-            color: '#929EAE',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            transition: 'color 0.2s',
-          }}
-          onMouseEnter={(e) =>
-            (e.currentTarget.style.color = accentColor || C.blue)
-          }
-          onMouseLeave={(e) => (e.currentTarget.style.color = '#929EAE')}
-        >
+        <button className="lock-display__edit-btn" onClick={startEdit}>
           <PenMini />
         </button>
       </div>
@@ -443,24 +306,12 @@ function LockableInput({ value, onCommit, placeholder, accentColor }) {
   }
 
   return (
-    <div style={{ position: 'relative' }}>
-      <span
-        style={{
-          position: 'absolute',
-          left: 9,
-          top: '50%',
-          transform: 'translateY(-50%)',
-          color: '#929EAE',
-          fontSize: 12,
-          fontWeight: 600,
-          pointerEvents: 'none',
-        }}
-      >
-        $
-      </span>
+    <div className="lock-input">
+      <span className="lock-input__prefix">$</span>
       <input
-        ref={inputRef}
+        ref={ref}
         type="number"
+        className="lock-input__field"
         value={isEditing ? draft : ''}
         onChange={(e) => {
           if (isEditing) setDraft(e.target.value);
@@ -471,165 +322,53 @@ function LockableInput({ value, onCommit, placeholder, accentColor }) {
         }}
         onFocus={() => {
           if (!isEditing) {
-            setDraft(isSaved ? String(numericValue) : '');
+            setDraft(isSaved ? String(nv) : '');
             setIsEditing(true);
           }
         }}
         onBlur={finishEdit}
-        onKeyDown={handleKeyDown}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') finishEdit();
+        }}
         placeholder={placeholder || '0'}
         style={{
-          width: '100%',
-          padding: '8px 10px 8px 22px',
-          background: '#F7F9FC',
-          border: `1.5px solid ${isEditing ? accentColor || C.blue : '#D6DBE4'}`,
-          borderRadius: 8,
-          color: C.text,
-          fontSize: 13,
-          fontFamily: "'Outfit', sans-serif",
-          fontWeight: 600,
-          boxSizing: 'border-box',
-          outline: 'none',
-          transition: 'border-color 0.25s',
+          borderColor: isEditing ? accentColor || 'var(--blue)' : undefined,
         }}
       />
     </div>
   );
 }
 
-function MoPill({ label, sel, inQ, onClick }) {
-  const [h, setH] = useState(false);
-  return (
-    <button
-      onClick={onClick}
-      onMouseEnter={() => setH(true)}
-      onMouseLeave={() => setH(false)}
-      style={{
-        flex: '1 1 0',
-        minWidth: 0,
-        padding: '6px 0',
-        borderRadius: 5,
-        border: 'none',
-        background: sel
-          ? C.navy
-          : h
-            ? '#D0D5DE'
-            : inQ
-              ? '#E8ECF2'
-              : 'transparent',
-        color: sel ? '#fff' : inQ ? C.text : C.muted,
-        cursor: 'pointer',
-        fontSize: 10,
-        fontWeight: sel ? 700 : 500,
-        fontFamily: "'Outfit', sans-serif",
-        transition: 'all 0.2s',
-      }}
-    >
-      {label}
-    </button>
-  );
-}
-
-function SubTab({ active, accent, onClick, label }) {
-  const [h, setH] = useState(false);
-  return (
-    <button
-      onClick={onClick}
-      onMouseEnter={() => setH(true)}
-      onMouseLeave={() => setH(false)}
-      style={{
-        border: 'none',
-        cursor: 'pointer',
-        fontFamily: 'inherit',
-        borderRadius: 8,
-        padding: '7px 20px',
-        fontSize: 13,
-        fontWeight: active ? 700 : 500,
-        background: active ? accent : h ? '#E3EAF3' : 'transparent',
-        color: active ? '#fff' : h ? C.navy : C.muted,
-        transition: 'all 0.2s ease',
-      }}
-    >
-      {label}
-    </button>
-  );
-}
-
-function TabBtn({ label, active, accent, onClick, isFirst, isLast }) {
-  const [h, setH] = useState(false);
-  return (
-    <button
-      onClick={onClick}
-      onMouseEnter={() => setH(true)}
-      onMouseLeave={() => setH(false)}
-      style={{
-        padding: '10px 28px',
-        cursor: 'pointer',
-        fontFamily: "'Outfit', sans-serif",
-        fontSize: 14,
-        fontWeight: 700,
-        letterSpacing: 0.5,
-        background: active ? accent || C.navy : h ? '#EDF1F8' : 'transparent',
-        color: active ? '#fff' : h ? C.navy : '#7A8A9E',
-        transition: 'all 0.2s ease',
-        border: `1.5px solid ${C.border}`,
-        borderRight: isLast ? `1.5px solid ${C.border}` : 'none',
-        borderRadius: isFirst
-          ? '10px 0 0 10px'
-          : isLast
-            ? '0 10px 10px 0'
-            : '0',
-      }}
-    >
-      {label}
-    </button>
-  );
-}
-
-function buildWhatsAppReminder(
-  list,
-  monthSalesFn,
-  mGoalFn,
-  accFn,
-  month,
-  quarter
-) {
-  const monthName = MONTHS_FULL[month];
-  let msg = `📊 *AGUAYO Y ASOCIADOS*\n`;
-  msg += `📅 Reporte de metas — *${monthName} 2026*\n`;
-  msg += `━━━━━━━━━━━━━━━━━━━━\n\n`;
+function buildWhatsAppReminder(list, msFn, mgFn, accFn, month, quarter) {
+  const mn = MONTHS_FULL[month];
+  let msg = `📊 *AGUAYO Y ASOCIADOS*\n📅 Reporte de metas — *${mn} 2026*\n━━━━━━━━━━━━━━━━━━━━\n\n`;
   list.forEach((per, idx) => {
     msg += `👤 *${per.name}*\n\n`;
-    let totalSales = 0,
-      totalGoal = 0;
+    let tS = 0,
+      tG = 0;
     LINES.forEach((l) => {
-      const mSales = monthSalesFn(per.id, l.id, month);
-      const goal = mGoalFn(per.id, l.id);
-      const diff = mSales - goal;
-      const a = accFn(per.id, l.id, month);
-      totalSales += mSales;
-      totalGoal += goal;
-      const statusIcon = diff >= 0 ? '✅' : '⚠️';
-      const diffText = diff >= 0 ? `+${fmt(diff)}` : `-${fmt(Math.abs(diff))}`;
-      msg += `   *${l.label}*\n`;
-      msg += `   Meta: ${fmt(goal)} → Ventas: ${fmt(mSales)}\n`;
-      msg += `   ${statusIcon} ${diff >= 0 ? 'Cumplida' : 'Pendiente'} (${diffText})\n`;
+      const s = msFn(per.id, l.id, month),
+        g = mgFn(per.id, l.id),
+        d = s - g,
+        a = accFn(per.id, l.id, month);
+      tS += s;
+      tG += g;
+      msg += `   *${l.label}*\n   Meta: ${fmt(g)} → Ventas: ${fmt(s)}\n   ${d >= 0 ? '✅ Cumplida' : '⚠️ Pendiente'} (${d >= 0 ? `+${fmt(d)}` : `-${fmt(Math.abs(d))}`})\n`;
       if (a.remaining > 0)
         msg += `   📌 Acumulado trim.: falta ${fmt(a.remaining)}\n`;
-      msg += `\n`;
+      msg += '\n';
     });
-    const totalDiff = totalSales - totalGoal;
-    const totalPct =
-      totalGoal > 0 ? ((totalSales / totalGoal) * 100).toFixed(0) : '0';
-    msg += `   📈 *Total: ${fmt(totalSales)} / ${fmt(totalGoal)} (${totalPct}%)*\n`;
-    msg += `   ${totalDiff >= 0 ? '🎉 Va por encima de la meta!' : `💪 Faltan ${fmt(Math.abs(totalDiff))} — ¡sí se puede!`}\n`;
-    if (idx < list.length - 1) msg += `\n━━━━━━━━━━━━━━━━━━━━\n\n`;
+    const td = tS - tG,
+      tp = tG > 0 ? ((tS / tG) * 100).toFixed(0) : '0';
+    msg += `   📈 *Total: ${fmt(tS)} / ${fmt(tG)} (${tp}%)*\n   ${td >= 0 ? '🎉 Va por encima de la meta!' : `💪 Faltan ${fmt(Math.abs(td))} — ¡sí se puede!`}\n`;
+    if (idx < list.length - 1) msg += '\n━━━━━━━━━━━━━━━━━━━━\n\n';
   });
-  msg += `\n━━━━━━━━━━━━━━━━━━━━\n`;
-  msg += `_${quarter.name} · Aguayo y Asociados_`;
+  msg += `\n━━━━━━━━━━━━━━━━━━━━\n_${quarter.name} · Aguayo y Asociados_`;
   return msg;
 }
 
+/* ═══════════════════════════════════════════════ */
+/*                    MAIN APP                     */
 /* ═══════════════════════════════════════════════ */
 export default function App() {
   const [goals, setGoals] = useState({});
@@ -647,17 +386,15 @@ export default function App() {
   );
   const saveTimer = useRef(null);
 
-  // Load from Neon on mount
   useEffect(() => {
     (async () => {
-      const data = await loadData();
-      setGoals(data.goals);
-      setSales(data.sales);
+      const d = await loadData();
+      setGoals(d.goals);
+      setSales(d.sales);
       setLoaded(true);
     })();
   }, []);
 
-  // Debounced save to Neon (saves 1s after last change)
   useEffect(() => {
     if (!loaded) return;
     if (saveTimer.current) clearTimeout(saveTimer.current);
@@ -702,39 +439,37 @@ export default function App() {
     setPanelOpen(true);
   };
 
-  const annualGoal = (pid, lid) => goals[`${pid}-${lid}-year`] || 0;
-  const mGoal = (pid, lid) => annualGoal(pid, lid) / 12;
-  const wGoal = (pid, lid) => annualGoal(pid, lid) / 48;
-  const weekSale = (pid, lid, m, w) => sales[`${pid}-${lid}-m${m}-w${w}`] || 0;
-  const monthSales = (pid, lid, m) => {
+  /* ─── Data ─── */
+  const ag = (pid, lid) => goals[`${pid}-${lid}-year`] || 0;
+  const mg = (pid, lid) => ag(pid, lid) / 12;
+  const wg = (pid, lid) => ag(pid, lid) / 48;
+  const ws = (pid, lid, m, w) => sales[`${pid}-${lid}-m${m}-w${w}`] || 0;
+  const ms = (pid, lid, m) => {
     let t = 0;
-    for (let w = 0; w < WEEKS; w++) t += weekSale(pid, lid, m, w);
+    for (let w = 0; w < WEEKS; w++) t += ws(pid, lid, m, w);
     return t;
   };
-  const mAll = (pid, m) =>
-    LINES.reduce((s, l) => s + monthSales(pid, l.id, m), 0);
-  const mGoalAll = (pid, m) => LINES.reduce((s, l) => s + mGoal(pid, l.id), 0);
-  const gMS = (lid, m) =>
-    PEOPLE.reduce((s, p) => s + monthSales(p.id, lid, m), 0);
-  const gMG = (lid, m) => PEOPLE.reduce((s, p) => s + mGoal(p.id, lid), 0);
+  const mAll = (pid, m) => LINES.reduce((s, l) => s + ms(pid, l.id, m), 0);
+  const mgAll = (pid, m) => LINES.reduce((s, l) => s + mg(pid, l.id), 0);
+  const gMS = (lid, m) => PEOPLE.reduce((s, p) => s + ms(p.id, lid, m), 0);
+  const gMG = (lid, m) => PEOPLE.reduce((s, p) => s + mg(p.id, lid), 0);
   const gAll = (m) => PEOPLE.reduce((s, p) => s + mAll(p.id, m), 0);
-  const gGoalAll = (m) => PEOPLE.reduce((s, p) => s + mGoalAll(p.id, m), 0);
-  const qSV = (pid, lid, q) =>
-    q.months.reduce((s, m) => s + monthSales(pid, lid, m), 0);
-  const qGV = (pid, lid) => mGoal(pid, lid) * 3;
+  const gGoalAll = (m) => PEOPLE.reduce((s, p) => s + mgAll(p.id, m), 0);
+  const qS = (pid, lid, q) => q.months.reduce((s, m) => s + ms(pid, lid, m), 0);
+  const qG = (pid, lid) => mg(pid, lid) * 3;
   const yS = (pid, lid) => {
     let t = 0;
-    for (let m = 0; m < 12; m++) t += monthSales(pid, lid, m);
+    for (let m = 0; m < 12; m++) t += ms(pid, lid, m);
     return t;
   };
-  const accum = (pid, lid, upTo) => {
+  const acc = (pid, lid, upTo) => {
     const q = getQ(upTo);
     let tg = 0,
       ts = 0;
     for (const m of q.months) {
       if (m > upTo) break;
-      tg += mGoal(pid, lid);
-      ts += monthSales(pid, lid, m);
+      tg += mg(pid, lid);
+      ts += ms(pid, lid, m);
     }
     return {
       goal: tg,
@@ -752,323 +487,139 @@ export default function App() {
   const person = PEOPLE.find((p) => p.id === tab);
   const isOpen = panelOpen && (tab || editMode);
 
+  /* ─── Loading ─── */
   if (!loaded)
     return (
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100vh',
-          fontFamily: "'Outfit', sans-serif",
-          background: C.bg,
-          color: C.muted,
-          gap: 12,
-        }}
-      >
-        <div
-          style={{
-            width: 32,
-            height: 32,
-            border: `3px solid ${C.border}`,
-            borderTopColor: C.blue,
-            borderRadius: '50%',
-            animation: 'spin 0.8s linear infinite',
-          }}
-        />
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-        <span style={{ fontSize: 13 }}>Cargando datos...</span>
+      <div className="app loading">
+        <img src={logoSvg} alt="" className="loading__logo" />
+        <div className="loading__spinner" />
+        <span className="loading__text">Cargando datos...</span>
       </div>
     );
 
+  /* ─── Bar Chart ─── */
   function renderBarChart(isGlobal, pid) {
     const bars = LINES.map((line) => {
-      const s = isGlobal
-        ? gMS(line.id, month)
-        : monthSales(pid, line.id, month);
-      const g = isGlobal ? gMG(line.id, month) : mGoal(pid, line.id);
+      const s = isGlobal ? gMS(line.id, month) : ms(pid, line.id, month);
+      const g = isGlobal ? gMG(line.id, month) : mg(pid, line.id);
       return { ...line, sales: s, goal: g, pct: g > 0 ? (s / g) * 100 : 0 };
     });
     const totalS = isGlobal ? gAll(month) : mAll(pid, month);
-    const totalG = isGlobal ? gGoalAll(month) : mGoalAll(pid, month);
+    const totalG = isGlobal ? gGoalAll(month) : mgAll(pid, month);
     const maxVal = Math.max(...bars.map((b) => Math.max(b.sales, b.goal)), 1);
+
     return (
-      <div style={{ padding: '24px 32px 0' }}>
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'baseline',
-            marginBottom: 18,
-          }}
-        >
+      <div className="chart">
+        <div className="chart__header">
           <div>
-            <div
-              style={{
-                fontSize: 10,
-                fontWeight: 600,
-                color: C.muted,
-                letterSpacing: 1.5,
-                textTransform: 'uppercase',
-                marginBottom: 2,
-              }}
-            >
+            <div className="chart__label">
               {isGlobal
                 ? 'Rendimiento global'
                 : PEOPLE.find((p) => p.id === pid)?.name}{' '}
               — {MONTHS_FULL[month]}
             </div>
-            <span style={{ fontSize: 28, fontWeight: 800, color: C.navy }}>
-              {fmt(totalS)}
-            </span>
-            <span
-              style={{
-                fontSize: 14,
-                fontWeight: 400,
-                color: C.muted,
-                marginLeft: 6,
-              }}
-            >
-              / {fmt(totalG)}
-            </span>
+            <span className="chart__total">{fmt(totalS)}</span>
+            <span className="chart__goal">/ {fmt(totalG)}</span>
           </div>
           <span
+            className="chart__pct"
             style={{
-              fontSize: 14,
-              fontWeight: 700,
               color:
                 totalS >= totalG && totalG > 0
-                  ? C.success
+                  ? 'var(--success)'
                   : totalG > 0
-                    ? C.danger
-                    : C.muted,
+                    ? 'var(--danger)'
+                    : 'var(--muted)',
             }}
           >
             {totalG > 0 ? pctVal(totalS, totalG) + '%' : '—'}
           </span>
         </div>
-        <div
-          style={{
-            display: 'flex',
-            gap: 40,
-            alignItems: 'flex-end',
-            height: 90,
-            padding: '0 16px',
-          }}
-        >
+        <div className="chart__bars">
           {bars.map((bar) => {
             const sH = maxVal > 0 ? (bar.sales / maxVal) * 100 : 0;
             const gH = maxVal > 0 ? (bar.goal / maxVal) * 100 : 0;
+            const bg =
+              bar.pct >= 100
+                ? `linear-gradient(180deg, var(--success), ${LC[bar.id]})`
+                : LC[bar.id];
             return (
-              <div
-                key={bar.id}
-                style={{
-                  flex: 1,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: 4,
-                }}
-              >
-                <div style={{ fontSize: 11, fontWeight: 700, color: C.text }}>
-                  {fmt(bar.sales)}
-                </div>
-                <div
-                  style={{
-                    width: '100%',
-                    height: 65,
-                    display: 'flex',
-                    alignItems: 'flex-end',
-                    justifyContent: 'center',
-                    gap: 3,
-                  }}
-                >
+              <div key={bar.id} className="chart__bar-col">
+                <div className="chart__bar-value">{fmt(bar.sales)}</div>
+                <div className="chart__bar-track">
                   <div
-                    style={{
-                      width: 4,
-                      background: '#D6DBE4',
-                      borderRadius: 2,
-                      height: `${gH}%`,
-                      transition: 'height 0.6s cubic-bezier(.34,1.4,.64,1)',
-                    }}
+                    className="chart__bar-ghost"
+                    style={{ height: `${gH}%` }}
                   />
                   <div
-                    style={{
-                      width: 8,
-                      borderRadius: 4,
-                      background:
-                        bar.pct >= 100
-                          ? `linear-gradient(180deg, ${C.success}, ${LC[bar.id]})`
-                          : LC[bar.id],
-                      height: `${sH}%`,
-                      transition: 'height 0.6s cubic-bezier(.34,1.4,.64,1)',
-                      opacity: 0.8,
-                    }}
+                    className="chart__bar-fill"
+                    style={{ height: `${sH}%`, background: bg }}
                   />
                 </div>
-                <div style={{ fontSize: 10, fontWeight: 600, color: C.muted }}>
-                  {bar.label}
-                </div>
+                <div className="chart__bar-label">{bar.label}</div>
               </div>
             );
           })}
         </div>
-        <div style={{ display: 'flex', gap: 2, marginTop: 16 }}>
-          {MONTHS_FULL.map((_, i) => (
-            <MoPill
-              key={i}
-              label={SHORT[i]}
-              sel={month === i}
-              inQ={getQ(i) === quarter}
-              onClick={() => setMonth(i)}
-            />
-          ))}
+        <div className="months">
+          {MONTHS_FULL.map((_, i) => {
+            const sel = month === i;
+            const inQ = getQ(i) === quarter;
+            return (
+              <button
+                key={i}
+                className={`mo-pill ${sel ? 'mo-pill--selected' : inQ ? 'mo-pill--in-q' : ''}`}
+                onClick={() => setMonth(i)}
+              >
+                {SHORT[i]}
+              </button>
+            );
+          })}
         </div>
       </div>
     );
   }
 
+  /* ─── RENDER ─── */
   return (
-    <div
-      style={{
-        fontFamily: "'Outfit', sans-serif",
-        minHeight: '100vh',
-        background: C.bg,
-        color: C.text,
-        margin: 0,
-        padding: 0,
-        width: '100%',
-      }}
-    >
-      <link
-        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap"
-        rel="stylesheet"
-      />
-      <style>{`
-        @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        html, body, #root { width: 100%; margin: 0; padding: 0; }
-        input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-        input[type=number] { -moz-appearance: textfield; }
-      `}</style>
-
+    <div className="app">
       {/* HEADER */}
-      <header
-        style={{
-          background: '#fff',
-          borderBottom: `1px solid ${C.border}`,
-          width: '100%',
-        }}
-      >
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '14px 32px',
-          }}
-        >
-          <div style={{ textAlign: 'left' }}>
-            <div style={{ fontSize: 14, fontWeight: 500, color: C.navy }}>
-              {getGreeting()},
-            </div>
-            <div
-              style={{
-                fontSize: 10,
-                fontWeight: 600,
-                color: C.muted,
-                letterSpacing: 0.5,
-                marginTop: 2,
-              }}
-            >
-              {getDateStr()}
-            </div>
+      <header className="header glass">
+        <div className="header__inner">
+          <div className="header__greeting">
+            <div className="header__greeting-text">{getGreeting()},</div>
+            <div className="header__date">{getDateStr()}</div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center' }}>
+          <div className="header__tabs">
             {PEOPLE.map((p, i) => (
-              <TabBtn
+              <button
                 key={p.id}
-                label={p.short}
-                active={tab === p.id && !editMode}
-                accent={p.accent}
+                className={`tab-btn ${i === 0 ? 'tab-btn--first' : ''} ${i === PEOPLE.length - 1 ? 'tab-btn--last' : ''} ${i > 0 && i < PEOPLE.length - 1 ? 'tab-btn--middle' : ''} ${!i && i < PEOPLE.length - 1 ? 'tab-btn--middle' : ''} ${tab === p.id && !editMode ? 'tab-btn--active' : ''}`}
+                style={
+                  tab === p.id && !editMode
+                    ? {
+                        background: p.accent,
+                        boxShadow: `0 2px 16px ${p.accent}30`,
+                      }
+                    : undefined
+                }
                 onClick={() => selectTab(p.id)}
-                isFirst={i === 0}
-                isLast={i === PEOPLE.length - 1}
-              />
+              >
+                {p.short}
+              </button>
             ))}
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            {/* Save indicator */}
-            {saving && (
-              <div
-                style={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: 4,
-                  background: C.light,
-                  animation: 'spin 1s linear infinite',
-                  opacity: 0.7,
-                }}
-              />
-            )}
+          <div className="header__actions">
+            {saving && <div className="save-dot" />}
             <button
+              className={`icon-btn glass ${!tab && !editMode ? 'icon-btn--disabled' : ''}`}
               onClick={togglePanel}
-              style={{
-                width: 36,
-                height: 36,
-                borderRadius: 18,
-                border: `1.5px solid ${C.border}`,
-                background: '#fff',
-                cursor: tab || editMode ? 'pointer' : 'default',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: C.muted,
-                transition: 'all 0.2s',
-                opacity: tab || editMode ? 1 : 0.35,
-              }}
-              onMouseEnter={(e) => {
-                if (tab || editMode) {
-                  e.currentTarget.style.background = '#EDF1F8';
-                  e.currentTarget.style.color = C.navy;
-                }
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = '#fff';
-                e.currentTarget.style.color = C.muted;
-              }}
             >
               <ChevronIcon up={isOpen} />
             </button>
             <button
+              className={`icon-btn ${editMode ? 'icon-btn--active' : 'glass'}`}
               onClick={openEdit}
-              style={{
-                width: 36,
-                height: 36,
-                borderRadius: 18,
-                border: `1.5px solid ${editMode ? C.navy : C.border}`,
-                background: editMode ? C.navy : '#fff',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: editMode ? '#fff' : C.muted,
-                transition: 'all 0.2s',
-              }}
-              onMouseEnter={(e) => {
-                if (!editMode) {
-                  e.currentTarget.style.background = '#EDF1F8';
-                  e.currentTarget.style.color = C.navy;
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!editMode) {
-                  e.currentTarget.style.background = '#fff';
-                  e.currentTarget.style.color = C.muted;
-                }
-              }}
             >
               <EditIconSvg />
             </button>
@@ -1077,118 +628,58 @@ export default function App() {
       </header>
 
       {/* BODY */}
-      <div style={{ padding: '20px 24px 40px', width: '100%' }}>
+      <div className="body">
         <div
-          style={{
-            background: C.panel,
-            borderRadius: 18,
-            overflow: 'hidden',
-            maxHeight: isOpen ? 5000 : 0,
-            opacity: isOpen ? 1 : 0,
-            transition:
-              'max-height 0.5s cubic-bezier(.4,0,.2,1), opacity 0.35s ease',
-            boxShadow: isOpen ? '0 4px 30px rgba(13,43,92,0.05)' : 'none',
-            width: '100%',
-          }}
+          className={`panel glass-strong ${isOpen ? 'panel--open' : 'panel--closed'}`}
         >
+          {/* EDIT MODE */}
           {editMode && (
             <>
               {renderBarChart(true, null)}
-              <div style={{ padding: '20px 32px 28px' }}>
-                <div style={{ textAlign: 'center', marginBottom: 24 }}>
-                  <div style={{ fontSize: 15, fontWeight: 700, color: C.navy }}>
-                    Registro de Ventas
-                  </div>
-                  <div style={{ fontSize: 11, color: C.muted }}>
+              <div className="content">
+                <div className="registro__title">
+                  <div className="registro__title-text">Registro de Ventas</div>
+                  <div className="registro__title-sub">
                     {MONTHS_FULL[month]} 2026
                   </div>
                 </div>
                 {PEOPLE.map((per) => (
-                  <div key={per.id} style={{ marginBottom: 32 }}>
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 10,
-                        marginBottom: 16,
-                      }}
-                    >
+                  <div key={per.id} className="registro__person">
+                    <div className="registro__person-header">
                       <div
+                        className="registro__avatar"
                         style={{
-                          width: 30,
-                          height: 30,
-                          borderRadius: 8,
-                          background: per.accent,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: 10,
-                          fontWeight: 800,
-                          color: '#fff',
+                          background: `linear-gradient(135deg, ${per.accent}, ${per.accent}CC)`,
+                          boxShadow: `0 2px 8px ${per.accent}25`,
                         }}
                       >
                         {per.initials}
                       </div>
-                      <span
-                        style={{ fontWeight: 700, fontSize: 14, color: C.navy }}
-                      >
-                        {per.name}
-                      </span>
+                      <span className="registro__person-name">{per.name}</span>
                     </div>
                     {LINES.map((line) => (
-                      <div key={line.id} style={{ marginBottom: 16 }}>
-                        <div
-                          style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            marginBottom: 8,
-                          }}
-                        >
-                          <span
-                            style={{
-                              fontSize: 13,
-                              fontWeight: 700,
-                              color: C.text,
-                            }}
-                          >
+                      <div key={line.id} className="registro__line">
+                        <div className="registro__line-header">
+                          <span className="registro__line-name">
                             {line.label}
                           </span>
-                          <div style={{ fontSize: 11, color: C.muted }}>
-                            Meta: {fmt(mGoal(per.id, line.id))}
-                            <span style={{ margin: '0 5px', color: C.border }}>
-                              |
-                            </span>
+                          <div className="registro__line-meta">
+                            Meta: {fmt(mg(per.id, line.id))}
+                            <span className="sep-pipe">|</span>
                             Total:{' '}
-                            <strong style={{ color: C.navy }}>
-                              {fmt(monthSales(per.id, line.id, month))}
-                            </strong>
+                            <strong>{fmt(ms(per.id, line.id, month))}</strong>
                             <span style={{ marginLeft: 5 }}>
                               <StatusText
-                                value={monthSales(per.id, line.id, month)}
-                                goal={mGoal(per.id, line.id)}
+                                value={ms(per.id, line.id, month)}
+                                goal={mg(per.id, line.id)}
                               />
                             </span>
                           </div>
                         </div>
-                        <div
-                          style={{
-                            display: 'grid',
-                            gridTemplateColumns: 'repeat(4, 1fr)',
-                            gap: 10,
-                          }}
-                        >
+                        <div className="registro__weeks">
                           {Array.from({ length: WEEKS }).map((_, w) => (
                             <div key={`${per.id}-${line.id}-${month}-${w}`}>
-                              <label
-                                style={{
-                                  fontSize: 10,
-                                  fontWeight: 500,
-                                  color: C.muted,
-                                  display: 'block',
-                                  marginBottom: 2,
-                                }}
-                              >
+                              <label className="registro__week-label">
                                 Sem {w + 1}
                               </label>
                               <LockableInput
@@ -1206,119 +697,70 @@ export default function App() {
                         </div>
                       </div>
                     ))}
-                    <div style={{ height: 1, background: C.border }} />
+                    <div className="registro__sep" />
                   </div>
                 ))}
               </div>
             </>
           )}
 
+          {/* PERSON VIEW */}
           {person && !editMode && (
             <>
               {renderBarChart(false, person.id)}
-              <div style={{ padding: '20px 32px 28px' }}>
-                <div
-                  style={{
-                    display: 'flex',
-                    gap: 4,
-                    marginBottom: 24,
-                    justifyContent: 'center',
-                  }}
-                >
+              <div className="content">
+                <div className="sub-tabs">
                   {[
                     { k: 'dashboard', l: 'Dashboard' },
                     { k: 'metas', l: 'Metas' },
                     { k: 'resumen', l: 'Resumen' },
                   ].map((v) => (
-                    <SubTab
+                    <button
                       key={v.k}
-                      active={subView === v.k}
-                      accent={person.accent}
+                      className={`sub-tab ${subView === v.k ? 'sub-tab--active' : ''}`}
+                      style={
+                        subView === v.k
+                          ? {
+                              background: person.accent,
+                              boxShadow: `0 2px 12px ${person.accent}30`,
+                            }
+                          : undefined
+                      }
                       onClick={() => setSubView(v.k)}
-                      label={v.l}
-                    />
+                    >
+                      {v.l}
+                    </button>
                   ))}
                   <button
+                    className="reminder-btn"
                     onClick={() => setShowReminder(true)}
-                    style={{
-                      padding: '6px 12px',
-                      borderRadius: 8,
-                      border: 'none',
-                      cursor: 'pointer',
-                      background: 'transparent',
-                      color: C.success,
-                      fontSize: 16,
-                      fontFamily: 'inherit',
-                      transition: 'transform 0.2s',
-                    }}
-                    onMouseEnter={(e) =>
-                      (e.target.style.transform = 'scale(1.15)')
-                    }
-                    onMouseLeave={(e) =>
-                      (e.target.style.transform = 'scale(1)')
-                    }
                   >
                     🔔
                   </button>
                 </div>
 
+                {/* DASHBOARD */}
                 {subView === 'dashboard' &&
                   LINES.map((line) => {
-                    const mS = monthSales(person.id, line.id, month);
-                    const goal = mGoal(person.id, line.id);
-                    const a = accum(person.id, line.id, month);
+                    const mS = ms(person.id, line.id, month),
+                      goal = mg(person.id, line.id),
+                      a = acc(person.id, line.id, month);
                     return (
-                      <div
-                        key={line.id}
-                        style={{
-                          padding: '16px 0',
-                          borderBottom: `1px solid ${C.border}`,
-                        }}
-                      >
-                        <div
-                          style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            marginBottom: 8,
-                          }}
-                        >
+                      <div key={line.id} className="line-row">
+                        <div className="line-row__header">
                           <div>
-                            <span
-                              style={{
-                                fontWeight: 700,
-                                fontSize: 15,
-                                color: C.navy,
-                              }}
-                            >
-                              {line.label}
-                            </span>
-                            <span
-                              style={{
-                                fontSize: 11,
-                                color: C.muted,
-                                marginLeft: 10,
-                              }}
-                            >
-                              Anual: {fmt(annualGoal(person.id, line.id))}
+                            <span className="line-row__name">{line.label}</span>
+                            <span className="line-row__annual">
+                              Anual: {fmt(ag(person.id, line.id))}
                             </span>
                           </div>
                           <StatusText value={mS} goal={goal} />
                         </div>
-                        <div
-                          style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            fontSize: 12,
-                            marginBottom: 5,
-                          }}
-                        >
-                          <span style={{ color: C.muted }}>
+                        <div className="line-row__progress-info">
+                          <span>
                             {fmt(mS)} / {fmt(goal)}
                           </span>
-                          <span style={{ fontWeight: 600 }}>
-                            {pctVal(mS, goal)}%
-                          </span>
+                          <span>{pctVal(mS, goal)}%</span>
                         </div>
                         <PBar
                           value={mS}
@@ -1326,43 +768,22 @@ export default function App() {
                           color={LC[line.id]}
                           h={6}
                         />
-                        <div
-                          style={{
-                            display: 'grid',
-                            gridTemplateColumns: 'repeat(4, 1fr)',
-                            gap: 16,
-                            marginTop: 14,
-                          }}
-                        >
+                        <div className="line-row__weeks">
                           {Array.from({ length: WEEKS }).map((_, w) => {
-                            const ws = weekSale(person.id, line.id, month, w);
+                            const wSale = ws(person.id, line.id, month, w);
                             return (
                               <div key={w}>
-                                <div
-                                  style={{
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    marginBottom: 3,
-                                  }}
-                                >
-                                  <span
-                                    style={{ fontSize: 10, color: C.muted }}
-                                  >
+                                <div className="week-cell__header">
+                                  <span className="week-cell__label">
                                     Sem {w + 1}
                                   </span>
-                                  <span
-                                    style={{
-                                      fontSize: 11,
-                                      fontWeight: 700,
-                                      color: C.text,
-                                    }}
-                                  >
-                                    {fmt(ws)}
+                                  <span className="week-cell__value">
+                                    {fmt(wSale)}
                                   </span>
                                 </div>
                                 <PBar
-                                  value={ws}
-                                  goal={wGoal(person.id, line.id)}
+                                  value={wSale}
+                                  goal={wg(person.id, line.id)}
                                   color={LC[line.id]}
                                   h={3}
                                 />
@@ -1372,12 +793,8 @@ export default function App() {
                         </div>
                         {a.remaining > 0 && (
                           <div
-                            style={{
-                              marginTop: 10,
-                              fontSize: 11,
-                              color: C.danger,
-                              fontWeight: 500,
-                            }}
+                            className="line-row__accum"
+                            style={{ color: 'var(--danger)' }}
                           >
                             Acumulado {quarter.name}: falta {fmt(a.remaining)}{' '}
                             para cerrar trimestre
@@ -1385,12 +802,8 @@ export default function App() {
                         )}
                         {a.diff >= 0 && a.goal > 0 && (
                           <div
-                            style={{
-                              marginTop: 10,
-                              fontSize: 11,
-                              color: C.success,
-                              fontWeight: 500,
-                            }}
+                            className="line-row__accum"
+                            style={{ color: 'var(--success)' }}
                           >
                             {quarter.name} al corriente — excedente +
                             {fmt(a.diff)}
@@ -1400,38 +813,19 @@ export default function App() {
                     );
                   })}
 
+                {/* METAS */}
                 {subView === 'metas' && (
                   <div>
-                    <p
-                      style={{
-                        color: C.muted,
-                        fontSize: 12,
-                        marginBottom: 24,
-                        textAlign: 'left',
-                      }}
-                    >
+                    <p className="metas__description">
                       Define la meta anual. Se divide automáticamente por mes y
                       semana. Lo no cumplido se acumula en el trimestre.
                     </p>
                     {LINES.map((line) => {
-                      const ag = annualGoal(person.id, line.id);
+                      const annual = ag(person.id, line.id);
                       return (
-                        <div
-                          key={line.id}
-                          style={{ marginBottom: 28, textAlign: 'left' }}
-                        >
-                          <div
-                            style={{
-                              fontWeight: 700,
-                              fontSize: 15,
-                              color: C.navy,
-                              marginBottom: 6,
-                              textAlign: 'left',
-                            }}
-                          >
-                            {line.label}
-                          </div>
-                          <div style={{ maxWidth: 300 }}>
+                        <div key={line.id} className="metas__line">
+                          <div className="metas__line-name">{line.label}</div>
+                          <div className="metas__input-wrap">
                             <LockableInput
                               value={goals[`${person.id}-${line.id}-year`]}
                               onCommit={(v) =>
@@ -1441,55 +835,30 @@ export default function App() {
                               accentColor={person.accent}
                             />
                           </div>
-                          {ag > 0 && (
+                          {annual > 0 && (
                             <>
-                              <div
-                                style={{
-                                  display: 'flex',
-                                  gap: 24,
-                                  marginTop: 8,
-                                  fontSize: 12,
-                                  color: C.muted,
-                                }}
-                              >
+                              <div className="metas__breakdown">
                                 <span>
-                                  Mensual:{' '}
-                                  <strong style={{ color: C.text }}>
-                                    {fmt(ag / 12)}
-                                  </strong>
+                                  Mensual: <strong>{fmt(annual / 12)}</strong>
                                 </span>
                                 <span>
-                                  Semanal:{' '}
-                                  <strong style={{ color: C.text }}>
-                                    {fmt(ag / 48)}
-                                  </strong>
+                                  Semanal: <strong>{fmt(annual / 48)}</strong>
                                 </span>
                                 <span>
-                                  Trimestral:{' '}
-                                  <strong style={{ color: C.text }}>
-                                    {fmt(ag / 4)}
-                                  </strong>
+                                  Trimestral: <strong>{fmt(annual / 4)}</strong>
                                 </span>
                               </div>
-                              <div style={{ marginTop: 10 }}>
-                                <div
-                                  style={{
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    fontSize: 11,
-                                    marginBottom: 3,
-                                  }}
-                                >
-                                  <span style={{ color: C.muted }}>
-                                    Progreso anual
-                                  </span>
-                                  <span style={{ fontWeight: 600 }}>
-                                    {fmt(yS(person.id, line.id))} / {fmt(ag)}
+                              <div className="metas__annual-progress">
+                                <div className="metas__annual-info">
+                                  <span>Progreso anual</span>
+                                  <span>
+                                    {fmt(yS(person.id, line.id))} /{' '}
+                                    {fmt(annual)}
                                   </span>
                                 </div>
                                 <PBar
                                   value={yS(person.id, line.id)}
-                                  goal={ag}
+                                  goal={annual}
                                   color={LC[line.id]}
                                   h={4}
                                 />
@@ -1501,22 +870,12 @@ export default function App() {
                     })}
                     <div style={{ textAlign: 'left', marginTop: 10 }}>
                       <button
+                        className="metas__delete-btn"
                         onClick={() => {
                           if (confirm('¿Borrar TODOS los datos?')) {
                             setGoals({});
                             setSales({});
                           }
-                        }}
-                        style={{
-                          padding: '6px 16px',
-                          background: 'transparent',
-                          border: `1px solid ${C.danger}33`,
-                          borderRadius: 8,
-                          color: C.danger,
-                          cursor: 'pointer',
-                          fontSize: 11,
-                          fontWeight: 500,
-                          fontFamily: 'inherit',
                         }}
                       >
                         Borrar datos
@@ -1525,73 +884,42 @@ export default function App() {
                   </div>
                 )}
 
+                {/* RESUMEN */}
                 {subView === 'resumen' &&
                   QUARTERS.map((q) => {
                     const curr = q === quarter;
                     return (
-                      <div key={q.name} style={{ marginBottom: 24 }}>
-                        <div
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 8,
-                            marginBottom: 12,
-                          }}
-                        >
-                          <span
-                            style={{
-                              fontWeight: 700,
-                              fontSize: 15,
-                              color: C.navy,
-                            }}
-                          >
-                            {q.name}
-                          </span>
-                          <span style={{ fontSize: 11, color: C.muted }}>
+                      <div key={q.name} className="quarter-block">
+                        <div className="quarter-block__header">
+                          <span className="quarter-block__name">{q.name}</span>
+                          <span className="quarter-block__label">
                             {q.label}
                           </span>
                           {curr && (
-                            <span
-                              style={{
-                                fontSize: 9,
-                                background: C.blue + '18',
-                                color: C.blue,
-                                padding: '2px 8px',
-                                borderRadius: 8,
-                                fontWeight: 600,
-                              }}
-                            >
-                              Actual
-                            </span>
+                            <span className="quarter-block__badge">Actual</span>
                           )}
                         </div>
                         {LINES.map((line) => {
-                          const qs = qSV(person.id, line.id, q);
-                          const qg = qGV(person.id, line.id);
-                          const diff = qs - qg;
+                          const qs = qS(person.id, line.id, q),
+                            qGoal = qG(person.id, line.id),
+                            diff = qs - qGoal;
                           return (
-                            <div key={line.id} style={{ marginBottom: 14 }}>
-                              <div
-                                style={{
-                                  display: 'flex',
-                                  justifyContent: 'space-between',
-                                  marginBottom: 4,
-                                }}
-                              >
-                                <span style={{ fontSize: 13, fontWeight: 600 }}>
+                            <div key={line.id} className="quarter-line">
+                              <div className="quarter-line__header">
+                                <span className="quarter-line__name">
                                   {line.label}
                                 </span>
-                                <div style={{ display: 'flex', gap: 12 }}>
-                                  <span
-                                    style={{ fontSize: 12, fontWeight: 600 }}
-                                  >
-                                    {fmt(qs)} / {fmt(qg)}
+                                <div className="quarter-line__values">
+                                  <span className="quarter-line__total">
+                                    {fmt(qs)} / {fmt(qGoal)}
                                   </span>
                                   <span
+                                    className="quarter-line__diff"
                                     style={{
-                                      fontSize: 11,
-                                      fontWeight: 700,
-                                      color: diff >= 0 ? C.success : C.danger,
+                                      color:
+                                        diff >= 0
+                                          ? 'var(--success)'
+                                          : 'var(--danger)',
                                     }}
                                   >
                                     {diff >= 0 ? '+' : ''}
@@ -1601,58 +929,40 @@ export default function App() {
                               </div>
                               <PBar
                                 value={qs}
-                                goal={qg}
+                                goal={qGoal}
                                 color={LC[line.id]}
                                 h={4}
                               />
-                              <div
-                                style={{
-                                  display: 'grid',
-                                  gridTemplateColumns: 'repeat(3, 1fr)',
-                                  gap: 20,
-                                  marginTop: 6,
-                                }}
-                              >
+                              <div className="quarter-line__months">
                                 {q.months.map((m) => {
-                                  const mS = monthSales(person.id, line.id, m);
-                                  const mg2 = mGoal(person.id, line.id);
-                                  const md = mS - mg2;
+                                  const mS = ms(person.id, line.id, m),
+                                    mGoal = mg(person.id, line.id),
+                                    md = mS - mGoal;
                                   return (
                                     <div key={m}>
-                                      <div
-                                        style={{
-                                          display: 'flex',
-                                          justifyContent: 'space-between',
-                                        }}
-                                      >
-                                        <span
-                                          style={{
-                                            fontSize: 10,
-                                            color: C.muted,
-                                          }}
-                                        >
+                                      <div className="quarter-month__header">
+                                        <span className="quarter-month__name">
                                           {MONTHS_FULL[m]}
                                         </span>
                                         <span
+                                          className="quarter-month__diff"
                                           style={{
-                                            fontSize: 10,
-                                            fontWeight: 700,
                                             color:
-                                              md >= 0 && mg2 > 0
-                                                ? C.success
-                                                : mg2 > 0
-                                                  ? C.danger
-                                                  : C.muted,
+                                              md >= 0 && mGoal > 0
+                                                ? 'var(--success)'
+                                                : mGoal > 0
+                                                  ? 'var(--danger)'
+                                                  : 'var(--muted)',
                                           }}
                                         >
-                                          {mg2 > 0
+                                          {mGoal > 0
                                             ? (md >= 0 ? '+' : '') + fmt(md)
                                             : '—'}
                                         </span>
                                       </div>
                                       <PBar
                                         value={mS}
-                                        goal={mg2}
+                                        goal={mGoal}
                                         color={LC[line.id]}
                                         h={3}
                                       />
@@ -1663,13 +973,7 @@ export default function App() {
                             </div>
                           );
                         })}
-                        <div
-                          style={{
-                            height: 1,
-                            background: C.border,
-                            marginTop: 4,
-                          }}
-                        />
+                        <div className="quarter-block__sep" />
                       </div>
                     );
                   })}
@@ -1678,33 +982,17 @@ export default function App() {
           )}
         </div>
 
+        {/* LANDING */}
         {!isOpen && (
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: '100px 20px',
-              textAlign: 'center',
-              animation: 'fadeUp 0.5s ease',
-            }}
-          >
-            <ShieldIllustration />
-            <div style={{ marginTop: 28, maxWidth: 360 }}>
-              <p
-                style={{
-                  fontSize: 15,
-                  fontWeight: 600,
-                  color: C.navy,
-                  lineHeight: 1.6,
-                  margin: '0 0 10px',
-                  fontStyle: 'italic',
-                }}
-              >
-                "{quote}"
-              </p>
-              <p style={{ fontSize: 12, color: C.muted, margin: 0 }}>
+          <div className="landing">
+            <img
+              src={logoSvg}
+              alt="Aguayo y Asociados"
+              className="landing__logo"
+            />
+            <div className="landing__content">
+              <p className="landing__quote">"{quote}"</p>
+              <p className="landing__hint">
                 Selecciona un nombre para ver su panel
               </p>
             </div>
@@ -1712,116 +1000,51 @@ export default function App() {
         )}
       </div>
 
+      {/* REMINDER MODAL */}
       {showReminder &&
         (() => {
           const list = editMode ? PEOPLE : person ? [person] : PEOPLE;
           const waMsg = buildWhatsAppReminder(
             list,
-            monthSales,
-            mGoal,
-            accum,
+            ms,
+            mg,
+            acc,
             month,
             quarter
           );
           return (
             <div
-              style={{
-                position: 'fixed',
-                inset: 0,
-                background: 'rgba(13,43,92,.12)',
-                backdropFilter: 'blur(10px)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                zIndex: 1000,
-                padding: 16,
-              }}
+              className="modal-overlay"
               onClick={() => setShowReminder(false)}
             >
               <div
-                style={{
-                  background: '#fff',
-                  borderRadius: 18,
-                  padding: 28,
-                  maxWidth: 520,
-                  width: '100%',
-                  maxHeight: '85vh',
-                  overflow: 'auto',
-                  boxShadow: '0 20px 60px rgba(13,43,92,0.1)',
-                }}
+                className="modal glass-strong"
                 onClick={(e) => e.stopPropagation()}
               >
-                <div style={{ textAlign: 'center', marginBottom: 20 }}>
-                  <div style={{ fontSize: 28, marginBottom: 4 }}>🔔</div>
-                  <h2
-                    style={{
-                      margin: 0,
-                      fontSize: 16,
-                      fontWeight: 800,
-                      color: C.navy,
-                    }}
-                  >
+                <div className="modal__header">
+                  <div className="modal__icon">🔔</div>
+                  <h2 className="modal__title">
                     Recordatorio — {MONTHS_FULL[month]} 2026
                   </h2>
-                  <p
-                    style={{ color: C.muted, fontSize: 11, margin: '4px 0 0' }}
-                  >
+                  <p className="modal__subtitle">
                     Aguayo y Asociados · {quarter.name}
                   </p>
                 </div>
-                <div
-                  style={{
-                    background: '#F0F4F0',
-                    borderRadius: 12,
-                    padding: '16px 18px',
-                    marginBottom: 16,
-                    fontFamily: 'monospace',
-                    fontSize: 11,
-                    lineHeight: 1.6,
-                    color: '#1B2A4A',
-                    whiteSpace: 'pre-wrap',
-                    wordBreak: 'break-word',
-                    maxHeight: 300,
-                    overflow: 'auto',
-                  }}
-                >
-                  {waMsg}
-                </div>
-                <div style={{ display: 'flex', gap: 10 }}>
+                <div className="modal__preview glass">{waMsg}</div>
+                <div className="modal__actions">
                   <button
+                    className="modal__wa-btn"
                     onClick={() => {
                       navigator.clipboard
                         .writeText(waMsg)
                         .then(() => alert('Copiado — pégalo en WhatsApp'));
                     }}
-                    style={{
-                      flex: 1,
-                      padding: '10px',
-                      background: '#25D366',
-                      border: 'none',
-                      borderRadius: 10,
-                      color: '#fff',
-                      cursor: 'pointer',
-                      fontSize: 13,
-                      fontWeight: 700,
-                      fontFamily: 'inherit',
-                    }}
                   >
                     Copiar para WhatsApp
                   </button>
                   <button
+                    className="modal__close-btn glass"
                     onClick={() => setShowReminder(false)}
-                    style={{
-                      padding: '10px 20px',
-                      background: '#EDF1F8',
-                      border: 'none',
-                      borderRadius: 10,
-                      color: C.muted,
-                      cursor: 'pointer',
-                      fontSize: 13,
-                      fontWeight: 500,
-                      fontFamily: 'inherit',
-                    }}
                   >
                     Cerrar
                   </button>
