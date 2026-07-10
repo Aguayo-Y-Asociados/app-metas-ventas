@@ -77,11 +77,16 @@ const QT = [
   { name: 'Q3', label: 'Jul – Sep', months: [6, 7, 8] },
   { name: 'Q4', label: 'Oct – Dic', months: [9, 10, 11] },
 ];
+const CT = [
+  { name: 'C1', label: 'Ene – Abr', months: [0, 1, 2, 3] },
+  { name: 'C2', label: 'May – Ago', months: [4, 5, 6, 7] },
+  { name: 'C3', label: 'Sep – Dic', months: [8, 9, 10, 11] },
+];
 const WK = 4;
 const LN = [
-  { id: 'vida', label: 'Vida' },
-  { id: 'gmm', label: 'GMM' },
-  { id: 'autos', label: 'Autos' },
+  { id: 'vida', label: 'Vida', cycle: 'cuatrimestre' },
+  { id: 'gmm', label: 'GMM', cycle: 'cuatrimestre' },
+  { id: 'autos', label: 'Autos', cycle: 'cuatrimestre' },
 ];
 const LC = { vida: 'var(--vida)', gmm: 'var(--gmm)', autos: 'var(--autos)' };
 const PP = [
@@ -155,6 +160,15 @@ const MOT = [
 
 /* ─── Helpers ─── */
 const getQ = (m) => QT.find((q) => q.months.includes(m));
+const getC = (m) => CT.find((c) => c.months.includes(m));
+const getPeriod = (lid, m) =>
+  LN.find((l) => l.id === lid)?.cycle === 'cuatrimestre' ? getC(m) : getQ(m);
+const getPeriods = (lid) =>
+  LN.find((l) => l.id === lid)?.cycle === 'cuatrimestre' ? CT : QT;
+const getClosingMonth = (lid, m) => {
+  const period = getPeriod(lid, m);
+  return MF[period.months[period.months.length - 1]];
+};
 const fmt = (n) =>
   !n || n === 0
     ? '$0'
@@ -322,7 +336,7 @@ function waReminder(list, msFn, mgFn, accFn, month, quarter) {
       tG += g;
       msg += `   *${l.label}*\n   Meta: ${fmt(g)} → Ventas: ${fmt(s)}\n   ${d >= 0 ? '✅ Cumplida' : '⚠️ Pendiente'} (${d >= 0 ? `+${fmt(d)}` : `-${fmt(Math.abs(d))}`})\n`;
       if (a.remaining > 0)
-        msg += `   📌 Acum. trim.: falta ${fmt(a.remaining)}\n`;
+        msg += `   📌 Cierre ${a.closingMonth}: falta ${fmt(a.remaining)}\n`;
       msg += '\n';
     });
     const td = tS - tG,
@@ -402,41 +416,63 @@ export default function App() {
   };
 
   const ag = (p, l) => goals[`${p}-${l}-year`] || 0;
-  const mg = (p, l) => ag(p, l) / 12,
-    wg = (p, l) => ag(p, l) / 48;
+  const mgBase = (p, l) => ag(p, l) / 12;
   const ws = (p, l, m, w) => sales[`${p}-${l}-m${m}-w${w}`] || 0;
   const ms = (p, l, m) => {
     let t = 0;
     for (let w = 0; w < WK; w++) t += ws(p, l, m, w);
     return t;
   };
+
+  // Dynamic monthly goal: what's left in the period / months remaining
+  const mgDynamic = (p, l, m) => {
+    const period = getPeriod(l, m);
+    const periodGoal = mgBase(p, l) * period.months.length;
+    let salesBefore = 0;
+    let monthsBeforeCurrent = 0;
+    for (const pm of period.months) {
+      if (pm >= m) break;
+      salesBefore += ms(p, l, pm);
+      monthsBeforeCurrent++;
+    }
+    const goalBefore = mgBase(p, l) * monthsBeforeCurrent;
+    const remaining = periodGoal - salesBefore;
+    const monthsLeft = period.months.length - monthsBeforeCurrent;
+    if (monthsLeft <= 0) return mgBase(p, l);
+    return Math.max(0, remaining / monthsLeft);
+  };
+
+  // For display, use dynamic goal for current month
+  const mg = (p, l) => mgDynamic(p, l, month);
+  const wg = (p, l) => mg(p, l) / WK;
+
   const mAll = (p, m) => LN.reduce((s, l) => s + ms(p, l.id, m), 0);
-  const mgAll = (p, m) => LN.reduce((s, l) => s + mg(p, l.id), 0);
+  const mgAll = (p, m) => LN.reduce((s, l) => s + mgDynamic(p, l.id, m), 0);
   const gMS = (l, m) => PP.reduce((s, p) => s + ms(p.id, l, m), 0);
-  const gMG = (l, m) => PP.reduce((s, p) => s + mg(p.id, l), 0);
+  const gMG = (l, m) => PP.reduce((s, p) => s + mgDynamic(p.id, l, m), 0);
   const gAll = (m) => PP.reduce((s, p) => s + mAll(p.id, m), 0);
   const gGoalAll = (m) => PP.reduce((s, p) => s + mgAll(p.id, m), 0);
   const qS = (p, l, q) => q.months.reduce((s, m) => s + ms(p, l, m), 0);
-  const qG = (p, l) => mg(p, l) * 3;
+  const qG = (p, l, q) => mgBase(p, l) * q.months.length;
   const yS = (p, l) => {
     let t = 0;
     for (let m = 0; m < 12; m++) t += ms(p, l, m);
     return t;
   };
   const acc = (p, l, u) => {
-    const q = getQ(u);
-    let tg = 0,
-      ts = 0;
-    for (const m of q.months) {
-      if (m > u) break;
-      tg += mg(p, l);
+    const period = getPeriod(l, u);
+    const periodGoal = mgBase(p, l) * period.months.length;
+    let ts = 0;
+    for (const m of period.months) {
       ts += ms(p, l, m);
     }
+    const remaining = Math.max(0, periodGoal - ts);
     return {
-      goal: tg,
+      goal: periodGoal,
       sales: ts,
-      diff: ts - tg,
-      remaining: Math.max(0, tg - ts),
+      diff: ts - periodGoal,
+      remaining,
+      closingMonth: getClosingMonth(l, u),
     };
   };
   const cG = (p, l, v) => setGoals((x) => ({ ...x, [`${p}-${l}-year`]: v }));
@@ -696,8 +732,8 @@ export default function App() {
                             className="line-row__accum"
                             style={{ color: 'var(--danger)' }}
                           >
-                            Acumulado {quarter.name}: falta {fmt(a.remaining)}{' '}
-                            para cerrar trimestre
+                            Próximo cierre: {a.closingMonth} — faltan{' '}
+                            {fmt(a.remaining)}
                           </div>
                         )}
                         {a.diff >= 0 && a.goal > 0 && (
@@ -705,7 +741,7 @@ export default function App() {
                             className="line-row__accum"
                             style={{ color: 'var(--success)' }}
                           >
-                            {quarter.name} al corriente — excedente +
+                            Cierre {a.closingMonth} — al corriente +
                             {fmt(a.diff)}
                           </div>
                         )}
@@ -716,8 +752,9 @@ export default function App() {
                 {sub === 'metas' && (
                   <div>
                     <p className="metas__description">
-                      Define la meta anual. Se divide automáticamente por mes y
-                      semana. Lo no cumplido se acumula en el trimestre.
+                      Define la meta anual por línea. Todas cierran por
+                      cuatrimestre. Los excedentes y faltantes se acumulan
+                      automáticamente.
                     </p>
                     {LN.map((l) => {
                       const an = ag(person.id, l.id);
@@ -741,7 +778,15 @@ export default function App() {
                                   Semanal: <strong>{fmt(an / 48)}</strong>
                                 </span>
                                 <span>
-                                  Trimestral: <strong>{fmt(an / 4)}</strong>
+                                  {l.cycle === 'cuatrimestre'
+                                    ? 'Cuatrimestral'
+                                    : 'Trimestral'}
+                                  :{' '}
+                                  <strong>
+                                    {fmt(
+                                      an / (l.cycle === 'cuatrimestre' ? 3 : 4)
+                                    )}
+                                  </strong>
                                 </span>
                               </div>
                               <div className="metas__annual-progress">
@@ -780,94 +825,149 @@ export default function App() {
                 )}
 
                 {sub === 'resumen' &&
-                  QT.map((q) => {
-                    const cur = q === quarter;
+                  LN.map((l) => {
+                    const periods = getPeriods(l.id);
                     return (
-                      <div key={q.name} className="quarter-block">
-                        <div className="quarter-block__header">
-                          <span className="quarter-block__name">{q.name}</span>
-                          <span className="quarter-block__label">
-                            {q.label}
+                      <div key={l.id} style={{ marginBottom: 36 }}>
+                        <div
+                          style={{
+                            fontSize: 13,
+                            fontWeight: 600,
+                            color: 'var(--ink)',
+                            marginBottom: 6,
+                            paddingBottom: 6,
+                            borderBottom: '1px solid var(--line)',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'baseline',
+                          }}
+                        >
+                          <span>{l.label}</span>
+                          <span
+                            style={{
+                              fontWeight: 400,
+                              color: 'var(--ink-muted)',
+                              fontSize: 10,
+                              letterSpacing: 0.5,
+                              textTransform: 'uppercase',
+                            }}
+                          >
+                            {l.cycle === 'cuatrimestre'
+                              ? 'Cuatrimestre'
+                              : 'Trimestral'}
                           </span>
-                          {cur && (
-                            <span className="quarter-block__badge">Actual</span>
-                          )}
                         </div>
-                        {LN.map((l) => {
+                        {periods.map((q) => {
+                          const curPeriod = getPeriod(l.id, month);
+                          const cur = q === curPeriod;
                           const qs = qS(person.id, l.id, q),
-                            qGoal = qG(person.id, l.id),
+                            qGoal = qG(person.id, l.id, q),
                             diff = qs - qGoal;
                           return (
-                            <div key={l.id} className="quarter-line">
-                              <div className="quarter-line__header">
-                                <span className="quarter-line__name">
-                                  {l.label}
+                            <div
+                              key={q.name}
+                              className="quarter-block"
+                              style={{
+                                marginBottom: 12,
+                                padding: '12px 14px',
+                                background: cur
+                                  ? 'var(--hover)'
+                                  : 'transparent',
+                                borderRadius: 'var(--radius)',
+                                border: cur
+                                  ? '1px solid var(--line)'
+                                  : '1px solid transparent',
+                              }}
+                            >
+                              <div
+                                className="quarter-block__header"
+                                style={{ marginBottom: 8 }}
+                              >
+                                <span
+                                  className="quarter-block__name"
+                                  style={{ fontSize: 12 }}
+                                >
+                                  {q.label}
                                 </span>
-                                <div className="quarter-line__values">
-                                  <span className="quarter-line__total">
-                                    {fmt(qs)} / {fmt(qGoal)}
+                                {cur && (
+                                  <span className="quarter-block__badge">
+                                    Actual
                                   </span>
-                                  <span
-                                    className="quarter-line__diff"
+                                )}
+                                <span
+                                  style={{
+                                    marginLeft: 'auto',
+                                    fontSize: 12,
+                                    fontWeight: 600,
+                                    color:
+                                      diff >= 0 && qGoal > 0
+                                        ? 'var(--success)'
+                                        : qGoal > 0
+                                          ? 'var(--danger)'
+                                          : 'var(--ink-muted)',
+                                  }}
+                                >
+                                  {qGoal > 0
+                                    ? `${fmt(qs)} / ${fmt(qGoal)}`
+                                    : '—'}
+                                </span>
+                              </div>
+                              {qGoal > 0 && (
+                                <>
+                                  <PBar
+                                    value={qs}
+                                    goal={qGoal}
+                                    color={LC[l.id]}
+                                    h={4}
+                                  />
+                                  <div
+                                    className="quarter-line__months"
                                     style={{
-                                      color:
-                                        diff >= 0
-                                          ? 'var(--success)'
-                                          : 'var(--danger)',
+                                      gridTemplateColumns: `repeat(${q.months.length}, 1fr)`,
+                                      marginTop: 8,
                                     }}
                                   >
-                                    {diff >= 0 ? '+' : ''}
-                                    {fmt(diff)}
-                                  </span>
-                                </div>
-                              </div>
-                              <PBar
-                                value={qs}
-                                goal={qGoal}
-                                color={LC[l.id]}
-                                h={4}
-                              />
-                              <div className="quarter-line__months">
-                                {q.months.map((m) => {
-                                  const mS = ms(person.id, l.id, m),
-                                    mGoal = mg(person.id, l.id),
-                                    md = mS - mGoal;
-                                  return (
-                                    <div key={m}>
-                                      <div className="quarter-month__header">
-                                        <span className="quarter-month__name">
-                                          {MF[m]}
-                                        </span>
-                                        <span
-                                          className="quarter-month__diff"
-                                          style={{
-                                            color:
-                                              md >= 0 && mGoal > 0
-                                                ? 'var(--success)'
-                                                : mGoal > 0
-                                                  ? 'var(--danger)'
-                                                  : 'var(--ink-muted)',
-                                          }}
-                                        >
-                                          {mGoal > 0
-                                            ? (md >= 0 ? '+' : '') + fmt(md)
-                                            : '—'}
-                                        </span>
-                                      </div>
-                                      <PBar
-                                        value={mS}
-                                        goal={mGoal}
-                                        color={LC[l.id]}
-                                        h={3}
-                                      />
-                                    </div>
-                                  );
-                                })}
-                              </div>
+                                    {q.months.map((m) => {
+                                      const mS = ms(person.id, l.id, m),
+                                        mGoalV = mgBase(person.id, l.id),
+                                        md = mS - mGoalV;
+                                      return (
+                                        <div key={m}>
+                                          <div className="quarter-month__header">
+                                            <span className="quarter-month__name">
+                                              {MF[m]}
+                                            </span>
+                                            <span
+                                              className="quarter-month__diff"
+                                              style={{
+                                                color:
+                                                  md >= 0 && mGoalV > 0
+                                                    ? 'var(--success)'
+                                                    : mGoalV > 0
+                                                      ? 'var(--danger)'
+                                                      : 'var(--ink-muted)',
+                                              }}
+                                            >
+                                              {mGoalV > 0
+                                                ? (md >= 0 ? '+' : '') + fmt(md)
+                                                : '—'}
+                                            </span>
+                                          </div>
+                                          <PBar
+                                            value={mS}
+                                            goal={mGoalV}
+                                            color={LC[l.id]}
+                                            h={3}
+                                          />
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </>
+                              )}
                             </div>
                           );
                         })}
-                        <div className="quarter-block__sep" />
                       </div>
                     );
                   })}
