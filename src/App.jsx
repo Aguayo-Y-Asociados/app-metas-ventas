@@ -169,11 +169,23 @@ const getClosingMonth = (lid, m) => {
   const period = getPeriod(lid, m);
   return MF[period.months[period.months.length - 1]];
 };
-const fmt = (n) =>
-  !n || n === 0
-    ? '$0'
-    : '$' + Math.abs(n).toLocaleString('es-MX', { minimumFractionDigits: 0 });
-const pct = (v, g) => (g > 0 ? ((v / g) * 100).toFixed(1) : '0.0');
+const fmt = (n) => {
+  if (!n || n === 0) return '$0';
+  const sign = n < 0 ? '-' : '';
+  return (
+    sign +
+    '$' +
+    Math.abs(n).toLocaleString('es-MX', { minimumFractionDigits: 0 })
+  );
+};
+const fmtK = (n) => {
+  if (!n || n === 0) return '$0';
+  const sign = n < 0 ? '-' : '';
+  if (Math.abs(n) >= 1000)
+    return sign + '$' + (Math.abs(n) / 1000).toFixed(0) + 'K';
+  return fmt(n);
+};
+const pct = (v, g) => (g > 0 ? Math.max(0, (v / g) * 100).toFixed(1) : '0.0');
 function greeting() {
   const h = new Date().getHours();
   if (h < 12) return 'Buenos días';
@@ -235,9 +247,13 @@ const PenS = () => (
 
 /* ─── Small components ─── */
 function PBar({ value, goal, color, h = 4 }) {
-  const p = goal > 0 ? Math.min((value / goal) * 100, 100) : 0;
+  const p = goal > 0 ? Math.max(0, Math.min((value / goal) * 100, 100)) : 0;
   const bg =
-    value >= goal && goal > 0 ? 'var(--success)' : color || 'var(--ink)';
+    value < 0
+      ? 'var(--danger)'
+      : value >= goal && goal > 0
+        ? 'var(--success)'
+        : color || 'var(--ink)';
   return (
     <div className="pbar" style={{ height: h }}>
       <div
@@ -514,7 +530,12 @@ export default function App() {
                 : PP.find((p) => p.id === pid)?.name}{' '}
               — {MF[month]}
             </div>
-            <span className="chart__total">{fmt(tS)}</span>
+            <span
+              className="chart__total"
+              style={tS < 0 ? { color: 'var(--danger)' } : undefined}
+            >
+              {fmt(tS)}
+            </span>
             <span className="chart__goal">/ {fmt(tG)}</span>
           </div>
           <span
@@ -533,11 +554,16 @@ export default function App() {
         </div>
         <div className="chart__bars">
           {bars.map((b) => {
-            const sH = mx > 0 ? (b.sales / mx) * 100 : 0,
+            const sH = mx > 0 ? Math.max(0, (b.sales / mx) * 100) : 0,
               gH = mx > 0 ? (b.goal / mx) * 100 : 0;
             return (
               <div key={b.id} className="chart__bar-col">
-                <div className="chart__bar-value">{fmt(b.sales)}</div>
+                <div
+                  className="chart__bar-value"
+                  style={b.sales < 0 ? { color: 'var(--danger)' } : undefined}
+                >
+                  {fmt(b.sales)}
+                </div>
                 <div className="chart__bar-track">
                   <div
                     className="chart__bar-ghost"
@@ -628,7 +654,15 @@ export default function App() {
                           <div className="registro__line-meta">
                             Meta: {fmt(mg(p.id, l.id))}
                             <span className="sep-pipe">|</span>Total:{' '}
-                            <strong>{fmt(ms(p.id, l.id, month))}</strong>{' '}
+                            <strong
+                              style={
+                                ms(p.id, l.id, month) < 0
+                                  ? { color: 'var(--danger)' }
+                                  : undefined
+                              }
+                            >
+                              {fmt(ms(p.id, l.id, month))}
+                            </strong>{' '}
                             <Status
                               value={ms(p.id, l.id, month)}
                               goal={mg(p.id, l.id)}
@@ -716,7 +750,14 @@ export default function App() {
                                   <span className="week-cell__label">
                                     Sem {w + 1}
                                   </span>
-                                  <span className="week-cell__value">
+                                  <span
+                                    className="week-cell__value"
+                                    style={
+                                      wSale < 0
+                                        ? { color: 'var(--danger)' }
+                                        : undefined
+                                    }
+                                  >
                                     {fmt(wSale)}
                                   </span>
                                 </div>
@@ -856,7 +897,7 @@ export default function App() {
                             }}
                           >
                             {l.cycle === 'cuatrimestre'
-                              ? 'Cuatrimestral'
+                              ? 'Cada 4 meses'
                               : 'Trimestral'}
                           </span>
                         </div>
