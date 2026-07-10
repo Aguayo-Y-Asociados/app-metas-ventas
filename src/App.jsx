@@ -260,7 +260,7 @@ function Status({ value, goal }) {
 }
 function LockInput({ value, onCommit, placeholder, accentColor }) {
   const nv = Number(value) || 0,
-    saved = nv > 0;
+    saved = nv !== 0;
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
   const ref = useRef(null);
@@ -272,15 +272,18 @@ function LockInput({ value, onCommit, placeholder, accentColor }) {
     if (editing && ref.current) ref.current.focus();
   }, [editing]);
   const done = () => {
-    const n = Number(draft) || 0;
-    if (n > 0) onCommit(n);
+    const n = Number(draft);
+    if (!isNaN(n) && n !== 0) onCommit(n);
     setEditing(false);
   };
   if (saved && !editing)
     return (
       <div className="lock-display">
-        <span className="lock-display__value">
-          ${nv.toLocaleString('es-MX')}
+        <span
+          className="lock-display__value"
+          style={nv < 0 ? { color: 'var(--danger)' } : undefined}
+        >
+          {nv < 0 ? '-' : ''}${Math.abs(nv).toLocaleString('es-MX')}
         </span>
         <button className="lock-display__edit-btn" onClick={open}>
           <PenS />
