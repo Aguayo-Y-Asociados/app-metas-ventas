@@ -37,7 +37,7 @@ export default async function handler(req, res) {
       for (const [key, amount] of Object.entries(sales)) {
         // e.g. "claudio-vida-m5-w2"
         const match = key.match(/^(.+?)-(.+?)-m(\d+)-w(\d+)$/);
-        if (match && Number(amount) > 0) {
+        if (match && Number(amount) !== 0) {
           const [, personId, lineId, monthStr, weekStr] = match;
           await sql`
             INSERT INTO sales (id, person_id, line_id, month, week, amount, updated_at)
