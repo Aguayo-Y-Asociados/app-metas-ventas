@@ -84,7 +84,7 @@ const CT = [
 ];
 const WK = 4;
 const LN = [
-  { id: 'vida', label: 'Vida', cycle: 'cuatrimestre' },
+  { id: 'vida', label: 'Vida', cycle: 'trimestre' },
   { id: 'gmm', label: 'GMM', cycle: 'cuatrimestre' },
   { id: 'autos', label: 'Autos', cycle: 'cuatrimestre' },
 ];
@@ -752,9 +752,9 @@ export default function App() {
                 {sub === 'metas' && (
                   <div>
                     <p className="metas__description">
-                      Define la meta anual por línea. Todas cierran por
-                      cuatrimestre. Los excedentes y faltantes se acumulan
-                      automáticamente.
+                      Define la meta anual por línea. Vida cierra cada
+                      trimestre, GMM y Autos cada cuatrimestre. Los excedentes y
+                      faltantes se acumulan automáticamente.
                     </p>
                     {LN.map((l) => {
                       const an = ag(person.id, l.id);
@@ -853,7 +853,7 @@ export default function App() {
                             }}
                           >
                             {l.cycle === 'cuatrimestre'
-                              ? 'Cuatrimestre'
+                              ? 'Cuatrimestral'
                               : 'Trimestral'}
                           </span>
                         </div>
