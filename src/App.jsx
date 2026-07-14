@@ -7,10 +7,10 @@ const API_BASE = '';
 async function loadData() {
   try {
     const res = await fetch(`${API_BASE}/api/load`);
-    if (!res.ok) throw new Error('Load failed');
+    if (!res.ok) throw new Error('fail');
     return await res.json();
   } catch (e) {
-    console.error('API load error:', e);
+    console.error('API load:', e);
     try {
       const l = localStorage.getItem('aguayo-backup');
       if (l) return JSON.parse(l);
@@ -29,7 +29,7 @@ async function saveData(goals, sales) {
       body: JSON.stringify({ goals, sales }),
     });
   } catch (e) {
-    console.error('API save error:', e);
+    console.error('API save:', e);
   }
 }
 
@@ -115,12 +115,12 @@ const MOT = [
   'El carácter se demuestra más en las acciones que en las palabras.',
   'Las personas fuertes se forman a través de la constancia.',
   'Con fe y disciplina, incluso los objetivos más difíciles pueden alcanzarse.',
+  'La fe te recuerda que no estás luchando sola.',
   'Con Dios, siempre existe un nuevo comienzo.',
   'La esperanza crece cuando recuerdas que Dios tiene el control.',
   'Dios sigue obrando, incluso en los días en que no lo puedes ver.',
   'La constancia transforma pequeños esfuerzos en grandes resultados',
   'Tu potencial es mucho mayor de lo que imaginas.',
-  'La paciencia y la disciplina construyen resultados duraderos.',
   'Cada día es una nueva oportunidad para crecer.',
   'Siempre hay razones para mirar el futuro con esperanza.',
   'La incomodidad de crecer siempre será mejor que la tristeza de estancarte.',
@@ -165,10 +165,6 @@ const getPeriod = (lid, m) =>
   LN.find((l) => l.id === lid)?.cycle === 'cuatrimestre' ? getC(m) : getQ(m);
 const getPeriods = (lid) =>
   LN.find((l) => l.id === lid)?.cycle === 'cuatrimestre' ? CT : QT;
-const getClosingMonth = (lid, m) => {
-  const period = getPeriod(lid, m);
-  return MF[period.months[period.months.length - 1]];
-};
 const fmt = (n) => {
   if (!n || n === 0) return '$0';
   const sign = n < 0 ? '-' : '';
@@ -177,13 +173,6 @@ const fmt = (n) => {
     '$' +
     Math.abs(n).toLocaleString('es-MX', { minimumFractionDigits: 0 })
   );
-};
-const fmtK = (n) => {
-  if (!n || n === 0) return '$0';
-  const sign = n < 0 ? '-' : '';
-  if (Math.abs(n) >= 1000)
-    return sign + '$' + (Math.abs(n) / 1000).toFixed(0) + 'K';
-  return fmt(n);
 };
 const pct = (v, g) => (g > 0 ? Math.max(0, (v / g) * 100).toFixed(1) : '0.0');
 function greeting() {
@@ -270,11 +259,11 @@ function Status({ value, goal }) {
     <span
       className={`status ${d >= 0 ? 'status--positive' : 'status--negative'}`}
     >
-      {d >= 0 ? `+${fmt(d)}` : `-${fmt(Math.abs(d))}`}
+      {d >= 0 ? `+${fmt(d)}` : `${fmt(d)}`}
     </span>
   );
 }
-function LockInput({ value, onCommit, placeholder, accentColor }) {
+function LockInput({ value, onCommit, placeholder }) {
   const nv = Number(value) || 0,
     saved = nv !== 0;
   const [editing, setEditing] = useState(false);
@@ -289,7 +278,7 @@ function LockInput({ value, onCommit, placeholder, accentColor }) {
   }, [editing]);
   const done = () => {
     const n = Number(draft);
-    if (!isNaN(n) && n !== 0) onCommit(n);
+    if (!isNaN(n) && draft !== '') onCommit(n);
     setEditing(false);
   };
   if (saved && !editing)
@@ -332,38 +321,73 @@ function LockInput({ value, onCommit, placeholder, accentColor }) {
           if (e.key === 'Enter') done();
         }}
         placeholder={placeholder || '0'}
-        style={{
-          borderColor: editing ? accentColor || 'var(--ink)' : undefined,
-        }}
       />
     </div>
   );
 }
 
-function waReminder(list, msFn, mgFn, accFn, month, quarter) {
-  let msg = `📊 *AGUAYO Y ASOCIADOS*\n📅 Reporte — *${MF[month]} 2026*\n━━━━━━━━━━━━━━━━━━━━\n\n`;
-  list.forEach((p, i) => {
-    msg += `👤 *${p.name}*\n\n`;
-    let tS = 0,
-      tG = 0;
+/* ─── WhatsApp Reminder ─── */
+function waReminder(
+  list,
+  msFn,
+  mgBaseFn,
+  mgDynFn,
+  accFn,
+  agFn,
+  wsFn,
+  ysFn,
+  month
+) {
+  const mn = MF[month];
+  const curWeek = Math.min(Math.ceil(new Date().getDate() / 7), 4);
+  let msg = ``;
+
+  list.forEach((p, idx) => {
+    msg += `¡Hola *${p.name}*!\n\n`;
+
+    // Avance del mes con meta semanal por línea
+    msg += `*Tu avance en este mes de ${mn} se ve así:*\n\n`;
     LN.forEach((l) => {
-      const s = msFn(p.id, l.id, month),
-        g = mgFn(p.id, l.id),
-        d = s - g,
-        a = accFn(p.id, l.id, month);
-      tS += s;
-      tG += g;
-      msg += `   *${l.label}*\n   Meta: ${fmt(g)} → Ventas: ${fmt(s)}\n   ${d >= 0 ? '✅ Cumplida' : '⚠️ Pendiente'} (${d >= 0 ? `+${fmt(d)}` : `-${fmt(Math.abs(d))}`})\n`;
-      if (a.remaining > 0)
-        msg += `   📌 Cierre ${a.closingMonth}: falta ${fmt(a.remaining)}\n`;
-      msg += '\n';
+      const annual = agFn(p.id, l.id);
+      if (!annual) return;
+      const monthSales = msFn(p.id, l.id, month);
+      const monthGoal = mgDynFn(p.id, l.id);
+      const monthFalta = Math.max(0, monthGoal - monthSales);
+      const weeksLeft = Math.max(1, WK - (curWeek - 1));
+      const weekGoal = monthFalta / weeksLeft;
+      const weekSale = wsFn(p.id, l.id, month, curWeek - 1);
+      const weekFalta = Math.max(0, weekGoal - weekSale);
+
+      msg += `*${l.label}:* vendiste ${fmt(monthSales)} de ${fmt(monthGoal)} → te faltan ${fmt(Math.round(monthFalta))}\n`;
+
+      if (weekFalta > 0) {
+        msg += `Esta semana ${curWeek} de ${mn} debes vender: ${fmt(Math.round(weekFalta))}\n\n`;
+      } else {
+        msg += `✅ ¡Meta semanal cumplida!\n\n`;
+      }
     });
-    const td = tS - tG,
-      tp = tG > 0 ? ((tS / tG) * 100).toFixed(0) : '0';
-    msg += `   📈 *Total: ${fmt(tS)} / ${fmt(tG)} (${tp}%)*\n   ${td >= 0 ? '🎉 Encima de la meta!' : '💪 Faltan ' + fmt(Math.abs(td)) + ' — ¡sí se puede!'}\n`;
-    if (i < list.length - 1) msg += '\n━━━━━━━━━━━━━━━━━━━━\n\n';
+
+    // Ventas acumuladas del año (compacto)
+    // Ventas acumuladas del año con progreso
+    msg += `*Estas son tus ventas acumuladas en todo el año:*\n`;
+    LN.forEach((l) => {
+      const annual = agFn(p.id, l.id);
+      if (!annual) return;
+      const yearSales = ysFn(p.id, l.id);
+      const yearFalta = Math.max(0, annual - yearSales);
+      const pct = Math.round((yearSales / annual) * 100);
+
+      let emoji;
+      if (pct >= 75) emoji = '✅ ¡Ya casi lo logras!';
+      else if (pct >= 50) emoji = '💪 ¡Vas bien!';
+      else if (pct >= 25) emoji = '🚀 ¡A por más!';
+      else emoji = '⚠️ ¡Necesitas empezar ya!';
+
+      msg += `${l.label}: ${fmt(yearSales)} de ${fmt(annual)} → te falta ${fmt(Math.round(yearFalta))} (vas al ${pct}% ${emoji})\n`;
+    });
+    msg += '\n';
   });
-  msg += `\n━━━━━━━━━━━━━━━━━━━━\n_${quarter.name} · Aguayo y Asociados_`;
+
   return msg;
 }
 
@@ -379,6 +403,7 @@ export default function App() {
   const [open, setOpen] = useState(false),
     [loaded, setLoaded] = useState(false),
     [saving, setSaving] = useState(false);
+  const [expandedPeriods, setExpandedPeriods] = useState({});
   const [quote] = useState(() => MOT[Math.floor(Math.random() * MOT.length)]);
   const timer = useRef(null);
 
@@ -433,35 +458,35 @@ export default function App() {
     setEdit(true);
     setOpen(true);
   };
+  const togglePeriod = (key) =>
+    setExpandedPeriods((prev) => ({ ...prev, [key]: !prev[key] }));
 
+  /* ─── Data ─── */
   const ag = (p, l) => goals[`${p}-${l}-year`] || 0;
   const mgBase = (p, l) => ag(p, l) / 12;
-  const ws = (p, l, m, w) => sales[`${p}-${l}-m${m}-w${w}`] || 0;
+  const wsVal = (p, l, m, w) => sales[`${p}-${l}-m${m}-w${w}`] || 0;
   const ms = (p, l, m) => {
     let t = 0;
-    for (let w = 0; w < WK; w++) t += ws(p, l, m, w);
+    for (let w = 0; w < WK; w++) t += wsVal(p, l, m, w);
     return t;
   };
 
-  // Dynamic monthly goal: what's left in the period / months remaining
+  // Dynamic monthly goal
   const mgDynamic = (p, l, m) => {
     const period = getPeriod(l, m);
     const periodGoal = mgBase(p, l) * period.months.length;
-    let salesBefore = 0;
-    let monthsBeforeCurrent = 0;
+    let salesBefore = 0,
+      monthsBefore = 0;
     for (const pm of period.months) {
       if (pm >= m) break;
       salesBefore += ms(p, l, pm);
-      monthsBeforeCurrent++;
+      monthsBefore++;
     }
-    const goalBefore = mgBase(p, l) * monthsBeforeCurrent;
     const remaining = periodGoal - salesBefore;
-    const monthsLeft = period.months.length - monthsBeforeCurrent;
+    const monthsLeft = period.months.length - monthsBefore;
     if (monthsLeft <= 0) return mgBase(p, l);
-    return Math.max(0, remaining / monthsLeft);
+    return remaining / monthsLeft;
   };
-
-  // For display, use dynamic goal for current month
   const mg = (p, l) => mgDynamic(p, l, month);
   const wg = (p, l) => mg(p, l) / WK;
 
@@ -482,16 +507,14 @@ export default function App() {
     const period = getPeriod(l, u);
     const periodGoal = mgBase(p, l) * period.months.length;
     let ts = 0;
-    for (const m of period.months) {
-      ts += ms(p, l, m);
-    }
-    const remaining = Math.max(0, periodGoal - ts);
+    for (const m of period.months) ts += ms(p, l, m);
     return {
       goal: periodGoal,
       sales: ts,
       diff: ts - periodGoal,
-      remaining,
-      closingMonth: getClosingMonth(l, u),
+      remaining: Math.max(0, periodGoal - ts),
+      closingMonth: MF[period.months[period.months.length - 1]],
+      period,
     };
   };
   const cG = (p, l, v) => setGoals((x) => ({ ...x, [`${p}-${l}-year`]: v }));
@@ -511,6 +534,7 @@ export default function App() {
       </div>
     );
 
+  /* ─── Bar Chart ─── */
   function barChart(global, pid) {
     const bars = LN.map((l) => {
       const s = global ? gMS(l.id, month) : ms(pid, l.id, month),
@@ -594,6 +618,7 @@ export default function App() {
     );
   }
 
+  /* ─── RENDER ─── */
   return (
     <div className="app">
       <header className="header">
@@ -633,6 +658,7 @@ export default function App() {
 
       <div className="body">
         <div className={`panel ${isOpen ? 'panel--open' : 'panel--closed'}`}>
+          {/* REGISTRO */}
           {edit && (
             <>
               {barChart(true, null)}
@@ -652,7 +678,7 @@ export default function App() {
                         <div className="registro__line-header">
                           <span className="registro__line-name">{l.label}</span>
                           <div className="registro__line-meta">
-                            Meta: {fmt(mg(p.id, l.id))}
+                            Meta: {fmt(Math.round(mg(p.id, l.id)))}
                             <span className="sep-pipe">|</span>Total:{' '}
                             <strong
                               style={
@@ -692,6 +718,7 @@ export default function App() {
             </>
           )}
 
+          {/* PERSON VIEW */}
           {person && !edit && (
             <>
               {barChart(false, person.id)}
@@ -718,6 +745,7 @@ export default function App() {
                   </button>
                 </div>
 
+                {/* DASHBOARD */}
                 {sub === 'dashboard' &&
                   LN.map((l) => {
                     const mS = ms(person.id, l.id, month),
@@ -736,14 +764,14 @@ export default function App() {
                         </div>
                         <div className="line-row__progress-info">
                           <span>
-                            {fmt(mS)} / {fmt(goal)}
+                            {fmt(mS)} / {fmt(Math.round(goal))}
                           </span>
                           <span>{pct(mS, goal)}%</span>
                         </div>
                         <PBar value={mS} goal={goal} color={LC[l.id]} h={5} />
                         <div className="line-row__weeks">
                           {Array.from({ length: WK }).map((_, w) => {
-                            const wSale = ws(person.id, l.id, month, w);
+                            const wSale = wsVal(person.id, l.id, month, w);
                             return (
                               <div key={w}>
                                 <div className="week-cell__header">
@@ -793,6 +821,7 @@ export default function App() {
                     );
                   })}
 
+                {/* METAS */}
                 {sub === 'metas' && (
                   <div>
                     <p className="metas__description">
@@ -801,7 +830,8 @@ export default function App() {
                       faltantes se acumulan automáticamente.
                     </p>
                     {LN.map((l) => {
-                      const an = ag(person.id, l.id);
+                      const an = ag(person.id, l.id),
+                        line = LN.find((x) => x.id === l.id);
                       return (
                         <div key={l.id} className="metas__line">
                           <div className="metas__line-name">{l.label}</div>
@@ -816,19 +846,26 @@ export default function App() {
                             <>
                               <div className="metas__breakdown">
                                 <span>
-                                  Mensual: <strong>{fmt(an / 12)}</strong>
+                                  Mensual:{' '}
+                                  <strong>{fmt(Math.round(an / 12))}</strong>
                                 </span>
                                 <span>
-                                  Semanal: <strong>{fmt(an / 48)}</strong>
+                                  Semanal:{' '}
+                                  <strong>{fmt(Math.round(an / 48))}</strong>
                                 </span>
                                 <span>
-                                  {l.cycle === 'cuatrimestre'
+                                  {line.cycle === 'cuatrimestre'
                                     ? 'Cuatrimestral'
                                     : 'Trimestral'}
                                   :{' '}
                                   <strong>
                                     {fmt(
-                                      an / (l.cycle === 'cuatrimestre' ? 3 : 4)
+                                      Math.round(
+                                        an /
+                                          (line.cycle === 'cuatrimestre'
+                                            ? 3
+                                            : 4)
+                                      )
                                     )}
                                   </strong>
                                 </span>
@@ -868,9 +905,11 @@ export default function App() {
                   </div>
                 )}
 
+                {/* RESUMEN — Accordion per line */}
                 {sub === 'resumen' &&
                   LN.map((l) => {
                     const periods = getPeriods(l.id);
+                    const line = LN.find((x) => x.id === l.id);
                     return (
                       <div key={l.id} style={{ marginBottom: 36 }}>
                         <div
@@ -878,7 +917,7 @@ export default function App() {
                             fontSize: 13,
                             fontWeight: 600,
                             color: 'var(--ink)',
-                            marginBottom: 6,
+                            marginBottom: 8,
                             paddingBottom: 6,
                             borderBottom: '1px solid var(--line)',
                             display: 'flex',
@@ -896,118 +935,301 @@ export default function App() {
                               textTransform: 'uppercase',
                             }}
                           >
-                            {l.cycle === 'cuatrimestre'
-                              ? 'Cada 4 meses'
+                            {line.cycle === 'cuatrimestre'
+                              ? 'Cuatrimestre'
                               : 'Trimestral'}
                           </span>
                         </div>
                         {periods.map((q) => {
                           const curPeriod = getPeriod(l.id, month);
                           const cur = q === curPeriod;
-                          const qs = qS(person.id, l.id, q),
-                            qGoal = qG(person.id, l.id, q),
-                            diff = qs - qGoal;
+                          const periodSales = qS(person.id, l.id, q);
+                          const periodGoal = qG(person.id, l.id, q);
+                          const diff = periodSales - periodGoal;
+                          const pKey = `${l.id}-${q.name}`;
+                          const isExpanded =
+                            expandedPeriods[pKey] ||
+                            (cur && expandedPeriods[pKey] === undefined);
+
+                          // Running accumulation per month
+                          let runningAccum = 0;
+
                           return (
                             <div
                               key={q.name}
-                              className="quarter-block"
                               style={{
-                                marginBottom: 12,
-                                padding: '12px 14px',
+                                marginBottom: 8,
+                                border: '1px solid var(--line)',
+                                borderRadius: 'var(--radius)',
+                                overflow: 'hidden',
                                 background: cur
                                   ? 'var(--hover)'
                                   : 'transparent',
-                                borderRadius: 'var(--radius)',
-                                border: cur
-                                  ? '1px solid var(--line)'
-                                  : '1px solid transparent',
                               }}
                             >
+                              {/* Header — clickable */}
                               <div
-                                className="quarter-block__header"
-                                style={{ marginBottom: 8 }}
+                                onClick={() => togglePeriod(pKey)}
+                                style={{
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'center',
+                                  padding: '12px 14px',
+                                  cursor: 'pointer',
+                                  transition: 'background 0.15s',
+                                }}
                               >
-                                <span
-                                  className="quarter-block__name"
-                                  style={{ fontSize: 12 }}
-                                >
-                                  {q.label}
-                                </span>
-                                {cur && (
-                                  <span className="quarter-block__badge">
-                                    Actual
-                                  </span>
-                                )}
-                                <span
+                                <div
                                   style={{
-                                    marginLeft: 'auto',
-                                    fontSize: 12,
-                                    fontWeight: 600,
-                                    color:
-                                      diff >= 0 && qGoal > 0
-                                        ? 'var(--success)'
-                                        : qGoal > 0
-                                          ? 'var(--danger)'
-                                          : 'var(--ink-muted)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 10,
                                   }}
                                 >
-                                  {qGoal > 0
-                                    ? `${fmt(qs)} / ${fmt(qGoal)}`
-                                    : '—'}
-                                </span>
-                              </div>
-                              {qGoal > 0 && (
-                                <>
-                                  <PBar
-                                    value={qs}
-                                    goal={qGoal}
-                                    color={LC[l.id]}
-                                    h={4}
-                                  />
-                                  <div
-                                    className="quarter-line__months"
+                                  <span
                                     style={{
-                                      gridTemplateColumns: `repeat(${q.months.length}, 1fr)`,
-                                      marginTop: 8,
+                                      fontSize: 12,
+                                      fontWeight: 600,
+                                      color: 'var(--ink)',
                                     }}
                                   >
-                                    {q.months.map((m) => {
-                                      const mS = ms(person.id, l.id, m),
-                                        mGoalV = mgBase(person.id, l.id),
-                                        md = mS - mGoalV;
-                                      return (
-                                        <div key={m}>
-                                          <div className="quarter-month__header">
-                                            <span className="quarter-month__name">
-                                              {MF[m]}
-                                            </span>
-                                            <span
-                                              className="quarter-month__diff"
-                                              style={{
-                                                color:
-                                                  md >= 0 && mGoalV > 0
-                                                    ? 'var(--success)'
-                                                    : mGoalV > 0
-                                                      ? 'var(--danger)'
-                                                      : 'var(--ink-muted)',
-                                              }}
-                                            >
-                                              {mGoalV > 0
-                                                ? (md >= 0 ? '+' : '') + fmt(md)
-                                                : '—'}
-                                            </span>
-                                          </div>
-                                          <PBar
-                                            value={mS}
-                                            goal={mGoalV}
-                                            color={LC[l.id]}
-                                            h={3}
+                                    {q.label}
+                                  </span>
+                                  {cur && (
+                                    <span className="quarter-block__badge">
+                                      Actual
+                                    </span>
+                                  )}
+                                </div>
+                                <div
+                                  style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 12,
+                                  }}
+                                >
+                                  <span
+                                    style={{
+                                      fontSize: 12,
+                                      fontWeight: 600,
+                                      color: 'var(--ink)',
+                                      fontVariantNumeric: 'tabular-nums',
+                                    }}
+                                  >
+                                    {fmt(periodSales)} / {fmt(periodGoal)}
+                                  </span>
+                                  {periodGoal > 0 && (
+                                    <span
+                                      style={{
+                                        fontSize: 11,
+                                        fontWeight: 600,
+                                        padding: '2px 8px',
+                                        borderRadius: 10,
+                                        background:
+                                          diff >= 0
+                                            ? 'rgba(45,106,48,0.08)'
+                                            : 'rgba(152,48,40,0.08)',
+                                        color:
+                                          diff >= 0
+                                            ? 'var(--success)'
+                                            : 'var(--danger)',
+                                      }}
+                                    >
+                                      {pct(periodSales, periodGoal)}%
+                                    </span>
+                                  )}
+                                  <span
+                                    style={{
+                                      fontSize: 12,
+                                      color: 'var(--ink-hint)',
+                                      transition: 'transform 0.2s',
+                                      transform: isExpanded
+                                        ? 'rotate(180deg)'
+                                        : 'rotate(0)',
+                                    }}
+                                  >
+                                    ▾
+                                  </span>
+                                </div>
+                              </div>
+
+                              {/* Body — collapsible */}
+                              {isExpanded && (
+                                <div style={{ padding: '0 14px 14px' }}>
+                                  {periodGoal > 0 && (
+                                    <PBar
+                                      value={periodSales}
+                                      goal={periodGoal}
+                                      color={LC[l.id]}
+                                      h={4}
+                                    />
+                                  )}
+
+                                  {/* Month rows: Meta | Ventas | Acumulado */}
+                                  <div
+                                    style={{
+                                      display: 'flex',
+                                      gap: 8,
+                                      padding: '10px 0 6px',
+                                      fontSize: 9,
+                                      color: 'var(--ink-muted)',
+                                      textTransform: 'uppercase',
+                                      letterSpacing: 0.5,
+                                      borderBottom: '1px solid var(--line)',
+                                    }}
+                                  >
+                                    <div style={{ width: 50 }}>Mes</div>
+                                    <div style={{ flex: 1 }}></div>
+                                    <div
+                                      style={{ width: 70, textAlign: 'right' }}
+                                    >
+                                      Meta
+                                    </div>
+                                    <div
+                                      style={{ width: 70, textAlign: 'right' }}
+                                    >
+                                      Ventas
+                                    </div>
+                                    <div
+                                      style={{ width: 80, textAlign: 'right' }}
+                                    >
+                                      Acumulado
+                                    </div>
+                                  </div>
+
+                                  {q.months.map((m) => {
+                                    const mSales = ms(person.id, l.id, m);
+                                    const mGoalBase = mgBase(person.id, l.id);
+                                    const mDiff = mSales - mGoalBase;
+                                    runningAccum += mDiff;
+                                    const hasSales =
+                                      mSales !== 0 || mGoalBase > 0;
+
+                                    return (
+                                      <div
+                                        key={m}
+                                        style={{
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          gap: 8,
+                                          padding: '8px 0',
+                                          borderBottom: '1px solid var(--line)',
+                                          fontSize: 11,
+                                        }}
+                                      >
+                                        <div
+                                          style={{
+                                            width: 50,
+                                            color: 'var(--ink-muted)',
+                                            fontWeight: 500,
+                                          }}
+                                        >
+                                          {MS[m]}
+                                        </div>
+                                        <div
+                                          style={{
+                                            flex: 1,
+                                            height: 4,
+                                            background: 'var(--line)',
+                                            borderRadius: 2,
+                                            overflow: 'hidden',
+                                          }}
+                                        >
+                                          <div
+                                            style={{
+                                              height: '100%',
+                                              borderRadius: 2,
+                                              width:
+                                                mGoalBase > 0
+                                                  ? `${Math.max(0, Math.min((mSales / mGoalBase) * 100, 100))}%`
+                                                  : '0%',
+                                              background:
+                                                mSales >= mGoalBase &&
+                                                mGoalBase > 0
+                                                  ? 'var(--success)'
+                                                  : mSales < 0
+                                                    ? 'var(--danger)'
+                                                    : 'var(--ink)',
+                                              transition: 'width 0.3s',
+                                            }}
                                           />
                                         </div>
-                                      );
-                                    })}
+                                        <div
+                                          style={{
+                                            width: 70,
+                                            textAlign: 'right',
+                                            fontVariantNumeric: 'tabular-nums',
+                                            color: 'var(--ink-muted)',
+                                            fontWeight: 500,
+                                          }}
+                                        >
+                                          {hasSales
+                                            ? fmt(Math.round(mGoalBase))
+                                            : '—'}
+                                        </div>
+                                        <div
+                                          style={{
+                                            width: 70,
+                                            textAlign: 'right',
+                                            fontVariantNumeric: 'tabular-nums',
+                                            fontWeight: 600,
+                                            color:
+                                              mSales < 0
+                                                ? 'var(--danger)'
+                                                : 'var(--ink)',
+                                          }}
+                                        >
+                                          {hasSales ? fmt(mSales) : '—'}
+                                        </div>
+                                        <div
+                                          style={{
+                                            width: 80,
+                                            textAlign: 'right',
+                                            fontVariantNumeric: 'tabular-nums',
+                                            fontWeight: 600,
+                                            color: !hasSales
+                                              ? 'var(--ink-muted)'
+                                              : runningAccum >= 0
+                                                ? 'var(--success)'
+                                                : 'var(--danger)',
+                                          }}
+                                        >
+                                          {hasSales
+                                            ? (runningAccum >= 0 ? '+' : '') +
+                                              fmt(runningAccum)
+                                            : '—'}
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+
+                                  {/* Period total */}
+                                  <div
+                                    style={{
+                                      display: 'flex',
+                                      justifyContent: 'space-between',
+                                      padding: '10px 0 0',
+                                      fontSize: 11,
+                                      fontWeight: 600,
+                                    }}
+                                  >
+                                    <span>
+                                      Total: {fmt(periodSales)} /{' '}
+                                      {fmt(periodGoal)}
+                                    </span>
+                                    <span
+                                      style={{
+                                        color:
+                                          diff >= 0
+                                            ? 'var(--success)'
+                                            : 'var(--danger)',
+                                      }}
+                                    >
+                                      {diff >= 0 ? '+' : ''}
+                                      {fmt(diff)}
+                                    </span>
                                   </div>
-                                </>
+                                </div>
                               )}
                             </div>
                           );
@@ -1020,6 +1242,7 @@ export default function App() {
           )}
         </div>
 
+        {/* Landing */}
         {!isOpen && (
           <div className="landing">
             <img src={logoSvg} alt="" className="landing__logo" />
@@ -1033,10 +1256,21 @@ export default function App() {
         )}
       </div>
 
+      {/* Reminder */}
       {reminder &&
         (() => {
           const list = edit ? PP : person ? [person] : PP;
-          const msg = waReminder(list, ms, mg, acc, month, quarter);
+          const msg = waReminder(
+            list,
+            ms,
+            mgBase,
+            mg,
+            acc,
+            ag,
+            wsVal,
+            yS,
+            month
+          );
           return (
             <div className="modal-overlay" onClick={() => setReminder(false)}>
               <div className="modal" onClick={(e) => e.stopPropagation()}>
@@ -1045,9 +1279,7 @@ export default function App() {
                   <h2 className="modal__title">
                     Recordatorio — {MF[month]} 2026
                   </h2>
-                  <p className="modal__subtitle">
-                    Aguayo y Asociados · {quarter.name}
-                  </p>
+                  <p className="modal__subtitle">Aguayo y Asociados</p>
                 </div>
                 <div className="modal__preview">{msg}</div>
                 <div className="modal__actions">
