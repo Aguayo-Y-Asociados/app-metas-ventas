@@ -378,10 +378,12 @@ function waReminder(
       const pct = Math.round((yearSales / annual) * 100);
 
       let emoji;
-      if (pct >= 75) emoji = '✅ ¡Ya casi lo logras!';
-      else if (pct >= 50) emoji = '💪 ¡Vas bien!';
-      else if (pct >= 25) emoji = '🚀 ¡A por más!';
-      else emoji = '⚠️ ¡Necesitas empezar ya!';
+
+      if (pct >= 100) emoji = '🏆 Meta superada. ¡Excelente trabajo!';
+      else if (pct >= 75) emoji = '🟢 ¡Ya casi lo logras!';
+      else if (pct >= 50) emoji = '🟡 ¡Vas bien!';
+      else if (pct >= 25) emoji = '🟠 ¡A por más!';
+      else emoji = '🔴 ¡Avance crítico';
 
       msg += `${l.label}: ${fmt(yearSales)} de ${fmt(annual)} → te falta ${fmt(Math.round(yearFalta))} (vas al ${pct}% ${emoji})\n`;
     });
