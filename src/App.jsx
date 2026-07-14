@@ -408,6 +408,7 @@ export default function App() {
   const [expandedPeriods, setExpandedPeriods] = useState({});
   const [quote] = useState(() => MOT[Math.floor(Math.random() * MOT.length)]);
   const timer = useRef(null);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -1286,14 +1287,15 @@ export default function App() {
                 <div className="modal__preview">{msg}</div>
                 <div className="modal__actions">
                   <button
-                    className="modal__wa-btn"
+                    className={`modal__wa-btn ${copied ? 'modal__wa-btn--copied' : ''}`}
                     onClick={() => {
-                      navigator.clipboard
-                        .writeText(msg)
-                        .then(() => alert('Copiado — pégalo en WhatsApp'));
+                      navigator.clipboard.writeText(msg).then(() => {
+                        setCopied(true);
+                        setTimeout(() => setCopied(false), 2000);
+                      });
                     }}
                   >
-                    Copiar para WhatsApp
+                    {copied ? '✓ Mensaje copiado' : 'Copiar para WhatsApp'}
                   </button>
                   <button
                     className="modal__close-btn"

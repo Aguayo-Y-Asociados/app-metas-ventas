@@ -48,6 +48,13 @@
   }
 }
 
+/* wp reminder */
+.modal__wa-btn--copied {
+  background: var(--success, #22c55e) !important;
+  pointer-events: none;
+  transition: background 0.3s ease;
+}
+
 /* ─── App shell ─── */
 .app {
   min-height: 100vh;
