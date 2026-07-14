@@ -351,7 +351,7 @@ function waReminder(
       const annual = agFn(p.id, l.id);
       if (!annual) return;
       const monthSales = msFn(p.id, l.id, month);
-      const monthGoal = mgDynFn(p.id, l.id);
+      const monthGoal = mgBaseFn(p.id, l.id);
       const monthFalta = Math.max(0, monthGoal - monthSales);
       const weeksLeft = Math.max(1, WK - (curWeek - 1));
       const weekGoal = monthFalta / weeksLeft;
